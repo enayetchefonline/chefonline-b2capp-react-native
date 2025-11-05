@@ -80,7 +80,7 @@ export default function CheckoutScreen() {
 	const [specialNote, setSpecialNoteText] = useState(storeNote || '');
 	const [voucherCode, setVoucherCodeText] = useState(storeVoucher?.vouchar_code || '');
 
-	console.log('storeSelectedDiscountId', storeSelectedDiscountId);
+	// console.log('storeSelectedDiscountId', storeSelectedDiscountId);
 
 	const normalize = (v) => (typeof v === 'string' ? v.trim().toLowerCase() : '');
 	const appliesToMode = (orderType, mode) => {
@@ -155,6 +155,9 @@ export default function CheckoutScreen() {
 		storeOrderMode || 'Collection',
 		restaurantDetails?.order_policy?.policy?.find((p) => p.policy_name === storeOrderMode)?.policy_time || 0
 	);
+
+	// console.log('availableTimeSlots', availableTimeSlots);
+	// console.log('restaurantDetails', JSON.stringify(restaurantDetails.restuarent_schedule));
 
 	// Default selected time
 	useEffect(() => {
@@ -413,6 +416,8 @@ export default function CheckoutScreen() {
 
 		try {
 			const response = await confirmOrder(payload);
+
+			console.log('response.......', response);
 
 			if (response.status === 'MySQL server has gone away477' && Object.keys(storeItemList).length > 0) {
 				alert('Order confirmation failed. Please try again.');
