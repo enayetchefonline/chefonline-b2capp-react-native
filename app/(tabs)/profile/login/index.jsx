@@ -14,10 +14,10 @@ import {
 	View,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import {useDispatch} from 'react-redux';
+import { useDispatch } from 'react-redux';
 import Colors from '../../../../constants/color';
-import {userLoginApi} from '../../../../lib/api';
-import {setUser} from '../../../../store/slices/authSlice';
+import { userLoginApi } from '../../../../lib/api';
+import { setUser } from '../../../../store/slices/authSlice';
 
 // === Google Auth ===
 import * as Google from 'expo-auth-session/providers/google';
@@ -252,7 +252,7 @@ export default function LoginScreen() {
 						</TouchableOpacity>
 
 						{/* Google & Facebook login */}
-						<View style={{gap: 10, marginTop: 12}}>
+						{/* <View style={{gap: 10, marginTop: 12}}>
 							<TouchableOpacity
 								style={[styles.socialButton, {backgroundColor: '#DB4437'}]}
 								onPress={handleGoogleLogin}
@@ -269,7 +269,7 @@ export default function LoginScreen() {
 								<Ionicons name="logo-facebook" size={18} color="#fff" style={styles.socialIcon} />
 								<Text style={styles.socialText}>Continue with Facebook</Text>
 							</TouchableOpacity>
-						</View>
+						</View> */}
 
 						<TouchableOpacity onPress={() => router.push('profile/forget-password')}>
 							<Text style={styles.forgotText}>Forgot Password?</Text>
