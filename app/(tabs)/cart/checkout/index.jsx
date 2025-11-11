@@ -2,15 +2,16 @@ import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+	ActivityIndicator,
+	Modal,
+	Platform,
+	ScrollView,
+	StyleSheet,
+	Text,
+	TextInput,
+	TouchableOpacity,
+	View,
+	useWindowDimensions, // 👈 added
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
@@ -21,16 +22,19 @@ import { getmyguavapay, myguavapayPaymentUpdate } from '../../../../lib/utils/my
 import { getAvailableTimeSlots } from '../../../../lib/utils/restaurantSchedule';
 import { getRyftpay } from '../../../../lib/utils/ryftpay-api';
 import {
-    setSelectedRestaurantDiscountId,
-    setSelectedRestaurantOfferId,
-    setSpecialNote,
-    setVoucher,
+	setSelectedRestaurantDiscountId,
+	setSelectedRestaurantOfferId,
+	setSpecialNote,
+	setVoucher,
 } from '../../../../store/slices/cartSlice';
 
 export default function CheckoutScreen() {
 	// Navigation and Redux
 	const router = useRouter();
 	const dispatch = useDispatch();
+
+	// 👇 screen height for flexible max height
+	const { height: screenHeight } = useWindowDimensions();
 
 	// Popup/modal visibility
 	const [timeSheetVisible, setTimeSheetVisible] = useState(false);
@@ -80,13 +84,10 @@ export default function CheckoutScreen() {
 	const [specialNote, setSpecialNoteText] = useState(storeNote || '');
 	const [voucherCode, setVoucherCodeText] = useState(storeVoucher?.vouchar_code || '');
 
-	// console.log('storeSelectedDiscountId', storeSelectedDiscountId);
-
 	const normalize = (v) => (typeof v === 'string' ? v.trim().toLowerCase() : '');
 	const appliesToMode = (orderType, mode) => {
 		const t = normalize(orderType);
 		const m = normalize(mode);
-		// Treat '', 'both', 'all', 'any' as universal
 		if (!t || ['both', 'all', 'any', 'all modes'].includes(t)) return true;
 		return t === m;
 	};
@@ -155,9 +156,6 @@ export default function CheckoutScreen() {
 		storeOrderMode || 'Collection',
 		restaurantDetails?.order_policy?.policy?.find((p) => p.policy_name === storeOrderMode)?.policy_time || 0
 	);
-
-	// console.log('availableTimeSlots', availableTimeSlots);
-	// console.log('restaurantDetails', JSON.stringify(restaurantDetails.restuarent_schedule));
 
 	// Default selected time
 	useEffect(() => {
@@ -274,10 +272,10 @@ export default function CheckoutScreen() {
 		} catch (error) {
 			setVoucherValidationMessage('Failed to validate voucher. Please try again.');
 		} finally {
-			setVoucherPopupVisible(false); // 🟢 First, close the previous popup
+			setVoucherPopupVisible(false);
 			setTimeout(
 				() => {
-					setVoucherValidationPopupVisible(true); // 🟢 Then safely open the validation popup
+					setVoucherValidationPopupVisible(true);
 				},
 				Platform.OS === 'ios' ? 300 : 0
 			);
@@ -301,7 +299,6 @@ export default function CheckoutScreen() {
 			}
 			if (response.status === 'Success') {
 				setVerificationCodePopupVisible(false);
-				// dispatch(clearCart());
 				router.push({
 					pathname: '/order-success',
 					params: {
@@ -309,7 +306,7 @@ export default function CheckoutScreen() {
 						status: response.status,
 						message: response.msg,
 						transactionId: response.transaction_id,
-						items: JSON.stringify(itemList), // must stringify
+						items: JSON.stringify(itemList),
 						discount: discountVal.toFixed(2),
 						carrybag: carryBagTotal.toFixed(2),
 						delivery: deliveryCharge.toFixed(2),
@@ -325,7 +322,7 @@ export default function CheckoutScreen() {
 						status: response.status,
 						message: response.msg,
 						transactionId: response.transaction_id,
-						items: JSON.stringify(itemList), // must stringify
+						items: JSON.stringify(itemList),
 						discount: discountVal.toFixed(2),
 						carrybag: carryBagTotal.toFixed(2),
 						delivery: deliveryCharge.toFixed(2),
@@ -449,7 +446,6 @@ export default function CheckoutScreen() {
 	async function paymentGatewayHandler(response) {
 		if (selectedPaymentSettingID == 12) {
 			const redirectURL = response.barclay_response.Body.beginWebPaymentResponse.return.redirectURL;
-			// dispatch(clearCart());
 			router.push({
 				pathname: '/card-payment-webview',
 				params: {url: redirectURL},
@@ -523,7 +519,6 @@ export default function CheckoutScreen() {
 					myguavapayResponse.data.order.id
 				);
 				if (orderUpdate.data?.status) {
-					// dispatch(clearCart());
 					router.push({
 						pathname: '/card-payment-webview',
 						params: {
@@ -548,7 +543,6 @@ export default function CheckoutScreen() {
 				transactionId: response.transaction_id,
 			},
 		});
-		// dispatch(clearCart());
 	}
 
 	// --- RENDER ---
@@ -556,16 +550,23 @@ export default function CheckoutScreen() {
 		<ScrollView contentContainerStyle={styles.scrollContainer} style={styles.container}>
 			<Text style={styles.restaurantTitle}>{restaurantName}</Text>
 
-			{/* Cart Items */}
+			{/* Cart Items (flexible height, scroll inside card) */}
 			<View style={styles.orderCard}>
-				{itemList.map((item) => (
-					<View key={item.id} style={styles.itemRow}>
-						<Text style={styles.itemText}>
-							{item.qty} x {item.name}
-						</Text>
-						<Text style={styles.itemPrice}>£{item.total.toFixed(2)}</Text>
-					</View>
-				))}
+				<ScrollView
+					nestedScrollEnabled
+					showsVerticalScrollIndicator={false}
+					style={{ maxHeight: screenHeight * 0.2 }} // 👈 50% of screen height
+					contentContainerStyle={{ paddingBottom: 4 }}
+				>
+					{itemList.map((item) => (
+						<View key={item.id} style={styles.itemRow}>
+							<Text style={styles.itemText}>
+								{item.qty} x {item.name}
+							</Text>
+							<Text style={styles.itemPrice}>£{item.total.toFixed(2)}</Text>
+						</View>
+					))}
+				</ScrollView>
 			</View>
 
 			{/* Carry Bag Info */}
@@ -634,13 +635,6 @@ export default function CheckoutScreen() {
 						<Text style={styles.summaryValue}>£{donationNum}</Text>
 					</View>
 				)}
-				{/* <View style={styles.summaryRow}>
-					<Text style={styles.summaryLabel}>
-						TOTAL ({carryBagItem ? 'Include Carrier Bag' : 'Exclude Carrier Bag'})
-					</Text>
-					<Text style={styles.summaryValue}>£{finalTotal.toFixed(2)}</Text>
-				</View> */}
-
 				<View style={styles.summaryRow}>
 					<Text style={styles.summaryLabel}>FINAL TOTAL</Text>
 					<Text style={styles.summaryValue}>£{finalTotalWithCarryBag.toFixed(2)}</Text>
