@@ -1,5 +1,5 @@
-import {useRouter} from 'expo-router';
-import {useMemo, useState} from 'react';
+import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
 import {
 	ActivityIndicator,
 	Platform,
@@ -10,11 +10,11 @@ import {
 	TouchableOpacity,
 	View,
 } from 'react-native';
-import {RadioButton} from 'react-native-paper';
+import { RadioButton } from 'react-native-paper';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import CustomPopUp from './../../../../components/ui/CustomPopUp';
 import Colors from './../../../../constants/color';
-import {userRegisterApi} from './../../../../lib/api';
+import { userRegisterApi } from './../../../../lib/api';
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ukMobileRegex = /^07\d{9}$/;
@@ -106,8 +106,12 @@ export default function RegisterScreen() {
 			want_text_message: form.smsConsent,
 		};
 
+		console.log("payload........", payload)
+
 		try {
 			const response = await userRegisterApi(payload);
+
+			console.log("resgister response", response)
 
 			if (response.status === 'Success') {
 				setPopupTitle('Success');
