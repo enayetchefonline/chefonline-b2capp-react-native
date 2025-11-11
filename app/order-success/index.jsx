@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
 import { clearCart } from '../../store/slices/cartSlice';
@@ -7,10 +7,13 @@ import { clearCart } from '../../store/slices/cartSlice';
 export default function OrderSuccessScreen() {
 	const router = useRouter();
 	const dispatch = useDispatch();
-	const {status, transactionId, discount, carrybag, delivery, total} = useLocalSearchParams();
+	const { status, transactionId, discount, carrybag, delivery, total } = useLocalSearchParams();
 	const storeItemList = useSelector((state) => state.cart.items);
 	const restaurantName = useSelector((state) => state.cart.restaurantName);
 	const restaurantDetails = useSelector((state) => state.restaurantDetail.data);
+
+	// 👉 for responsive heights
+	const { height: screenHeight } = useWindowDimensions();
 
 	const isSuccess = status === 1 || status?.toLowerCase?.() === 'success';
 
@@ -22,6 +25,11 @@ export default function OrderSuccessScreen() {
 			router.replace('/(tabs)/cart');
 		}
 	};
+
+	// Pre-compute subtotal
+	const subtotal = Object.values(storeItemList)
+		.reduce((sum, itemObj) => sum + parseFloat(itemObj.item.dish_price) * itemObj.quantity, 0)
+		.toFixed(2);
 
 	return (
 		<ScrollView contentContainerStyle={styles.container}>
@@ -55,54 +63,60 @@ export default function OrderSuccessScreen() {
 					</>
 				) : null}
 
-				{/* Image with overlay text */}
 				<Image
-					source={{uri: 'https://www.chefonline.co.uk/images/order-complete.jpg'}}
+					source={{ uri: 'https://www.chefonline.co.uk/images/order-complete.jpg' }}
 					style={styles.bannerImage}
 					resizeMode="cover"
 				/>
 
-				{/* Order Summary */}
-				{/* Order Summary */}
-				<View style={styles.summaryBox}>
+				{/* Summary */}
+				<View
+					style={[
+						styles.summaryBox,
+						{ maxHeight: screenHeight * 0.45 }, // cap summary box height to ~45% of screen
+					]}
+				>
 					<Text style={styles.summaryTitle}>My Order</Text>
 
-					{Object.values(storeItemList).map((itemObj, index) => {
-						const {dish_name, dish_price} = itemObj.item;
-						const quantity = itemObj.quantity;
-						const totalPrice = (parseFloat(dish_price) * quantity).toFixed(2);
-						return (
-							<Text style={styles.summaryLine} key={index}>
-								{quantity} x {dish_name} - £{totalPrice}
-							</Text>
-						);
-					})}
+					{/* Scroll only the items list */}
+					<ScrollView
+						nestedScrollEnabled
+						showsVerticalScrollIndicator={true}     // 👈 show scrollbar
+						indicatorStyle="black"                   // 👈 iOS hint for darker indicator
+						style={{ maxHeight: screenHeight * 0.22, paddingRight: 4 }} // 👈 small right padding
+						contentContainerStyle={{ paddingBottom: 6 }}
+						scrollIndicatorInsets={{ right: 1 }}     // 👈 keep indicator visible
+					>
+						{Object.values(storeItemList).map((itemObj, index) => {
+							const { dish_name, dish_price } = itemObj.item;
+							const quantity = itemObj.quantity;
+							const totalPrice = (parseFloat(dish_price) * quantity).toFixed(2);
+							return (
+								<Text style={styles.summaryLine} key={index}>
+									{quantity} x {dish_name} - £{totalPrice}
+								</Text>
+							);
+						})}
+					</ScrollView>
 
-					{/* Subtotal */}
-					<Text style={styles.summaryLine}>
-						Subtotal: £
-						{Object.values(storeItemList)
-							.reduce((sum, itemObj) => sum + parseFloat(itemObj.item.dish_price) * itemObj.quantity, 0)
-							.toFixed(2)}
-					</Text>
+					{/* Totals (non-scrolling) */}
+					<View style={{ marginTop: 8, backgroundColor: '#fff', padding: 8, borderRadius: 6, borderColor: '#ddd', borderWidth: 1 }}>
+						<Text style={styles.summaryLine}>Subtotal: £{subtotal}</Text>
 
-					{/* Dynamic Discount Line */}
-					{parseFloat(discount) > 0 && (
-						<Text style={styles.summaryLine}>Discount: -£{parseFloat(discount).toFixed(2)}</Text>
-					)}
+						{parseFloat(discount) > 0 && (
+							<Text style={styles.summaryLine}>Discount: -£{parseFloat(discount).toFixed(2)}</Text>
+						)}
 
-					{/* Delivery */}
-					{parseFloat(delivery) > 0 && (
-						<Text style={styles.summaryLine}>Delivery: £{parseFloat(delivery).toFixed(2)}</Text>
-					)}
+						{parseFloat(delivery) > 0 && (
+							<Text style={styles.summaryLine}>Delivery: £{parseFloat(delivery).toFixed(2)}</Text>
+						)}
 
-					{/* Carry Bag */}
-					{parseFloat(carrybag) > 0 && (
-						<Text style={styles.summaryLine}>Carry Bag: £{parseFloat(carrybag).toFixed(2)}</Text>
-					)}
+						{parseFloat(carrybag) > 0 && (
+							<Text style={styles.summaryLine}>Carry Bag: £{parseFloat(carrybag).toFixed(2)}</Text>
+						)}
 
-					{/* Final Total */}
-					<Text style={styles.total}>Total: £{parseFloat(total).toFixed(2)}</Text>
+						<Text style={styles.total}>Total: £{parseFloat(total).toFixed(2)}</Text>
+					</View>
 				</View>
 
 				<TouchableOpacity
@@ -118,9 +132,9 @@ export default function OrderSuccessScreen() {
 
 const styles = StyleSheet.create({
 	container: {
-		marginTop: 50,
+		marginTop: 32,
 		padding: 16,
-		paddingBottom: 100,
+		paddingBottom: 24,
 		backgroundColor: '#f4f4f4',
 		flexGrow: 1,
 		alignItems: 'center',
@@ -128,7 +142,7 @@ const styles = StyleSheet.create({
 	card: {
 		backgroundColor: '#fff',
 		borderRadius: 12,
-		padding: 20,
+		padding: 16,
 		width: '100%',
 		maxWidth: 500,
 		alignItems: 'center',
@@ -137,20 +151,20 @@ const styles = StyleSheet.create({
 		fontSize: 18,
 		fontWeight: '600',
 		textAlign: 'center',
-		marginTop: 16,
+		marginTop: 12,
 	},
 	highlight: {
 		fontStyle: 'italic',
 		color: '#333',
 	},
 	orderCode: {
-		marginTop: 10,
+		marginTop: 8,
 		fontSize: 14,
 		textAlign: 'center',
 	},
-	bold: {fontWeight: '700'},
+	bold: { fontWeight: '700' },
 	support: {
-		marginTop: 10,
+		marginTop: 8,
 		fontSize: 13,
 		color: '#444',
 		textAlign: 'center',
@@ -159,14 +173,14 @@ const styles = StyleSheet.create({
 		fontSize: 13,
 		color: '#666',
 		textAlign: 'center',
-		marginBottom: 16,
+		marginBottom: 12,
 	},
 	bannerImage: {
 		width: '100%',
-		height: 160,
+		height: 120, // slightly smaller to help fit within one screen
 		justifyContent: 'center',
 		alignItems: 'center',
-		marginVertical: 16,
+		marginVertical: 12,
 	},
 	overlayText: {
 		color: '#fff',
@@ -181,7 +195,7 @@ const styles = StyleSheet.create({
 		width: '100%',
 		padding: 12,
 		borderRadius: 8,
-		marginTop: 10,
+		marginTop: 8,
 	},
 	summaryTitle: {
 		fontWeight: 'bold',
@@ -197,13 +211,12 @@ const styles = StyleSheet.create({
 		fontSize: 16,
 		fontWeight: 'bold',
 		color: '#000',
-		marginTop: 8,
+		marginTop: 6,
 	},
 	btn: {
-		// backgroundColor: isSuccess ? '#28a745' : '#ff4d4f',
-		marginTop: 24,
+		marginTop: 16,
 		paddingVertical: 12,
-		paddingHorizontal: 32,
+		paddingHorizontal: 28,
 		borderRadius: 6,
 	},
 	btnText: {
