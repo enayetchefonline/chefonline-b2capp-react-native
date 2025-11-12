@@ -1,10 +1,10 @@
-import {useLocalSearchParams, useRouter} from 'expo-router';
-import {useCallback, useEffect, useState} from 'react';
-import {ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import {useDispatch, useSelector} from 'react-redux';
-import {getPaymentMethodOption, individualRestaurantsApi} from '../../../../../lib/api';
-import {getCurrentApiDateTimeObj, getRestaurantScheduleStatus} from '../../../../../lib/utils/restaurantSchedule';
+import { useDispatch, useSelector } from 'react-redux';
+import { getPaymentMethodOption, individualRestaurantsApi } from '../../../../../lib/api';
+import { getCurrentApiDateTimeObj, getRestaurantScheduleStatus } from '../../../../../lib/utils/restaurantSchedule';
 import {
 	addItemToCart,
 	setDiscount,
@@ -14,7 +14,7 @@ import {
 	setRestaurantName,
 	updateItemQuantity,
 } from './../../../../../store/slices/cartSlice';
-import {setRestaurantDetail, setRestaurantPaymentOptions} from './../../../../../store/slices/restaurantDetailSlice';
+import { setRestaurantDetail, setRestaurantPaymentOptions } from './../../../../../store/slices/restaurantDetailSlice';
 
 import ScrollableTabString from 'react-native-scrollable-tabstring';
 
@@ -37,7 +37,7 @@ const COLORS = {
 
 export default function RestaurantDetailScreen() {
 	const router = useRouter();
-	const {restaurantId} = useLocalSearchParams();
+	const { restaurantId } = useLocalSearchParams();
 	const dispatch = useDispatch();
 
 	const [restaurantDetails, setRestaurantDetails] = useState(null);
@@ -49,6 +49,8 @@ export default function RestaurantDetailScreen() {
 	const [loading, setLoading] = useState(true);
 
 	const cartItems = useSelector((state) => state.cart.items);
+
+	console.log("restaurantDetails:", JSON.stringify(restaurantDetails?.accept_reservation));
 
 	// Fetch payment options and restaurant details
 	useEffect(() => {
@@ -69,6 +71,7 @@ export default function RestaurantDetailScreen() {
 		const fetchData = async () => {
 			try {
 				const response = await individualRestaurantsApi(restaurantId);
+				// console.log("individualRestaurantsApi response:", JSON.stringify(response));
 				const restaurant = response.app?.[0];
 				setRestaurantDetails(restaurant);
 				dispatch(setRestaurantDetail(restaurant));
@@ -96,7 +99,7 @@ export default function RestaurantDetailScreen() {
 		dispatch(addItemToCart(item));
 	};
 	const updateQuantity = (itemId, newQuantity) => {
-		dispatch(updateItemQuantity({itemId, quantity: newQuantity}));
+		dispatch(updateItemQuantity({ itemId, quantity: newQuantity }));
 	};
 	const isItemInCart = (itemId) => cartItems.hasOwnProperty(itemId);
 	const getItemQuantity = (itemId) => cartItems[itemId]?.quantity || 0;
@@ -119,14 +122,14 @@ export default function RestaurantDetailScreen() {
 
 	const calculateTotal = () =>
 		Object.values(cartItems)
-			.reduce((total, {item, quantity}) => total + parseFloat(item.dish_price) * quantity, 0)
+			.reduce((total, { item, quantity }) => total + parseFloat(item.dish_price) * quantity, 0)
 			.toFixed(2);
 
 	// --- Menu Data Preparation ---
 	const categories =
 		restaurantDetails?.cuisine?.flatMap((cuisine) => cuisine.category?.map((cat) => cat.category_name)) || [];
 
-	const tabCategories = categories.map((cat) => ({label: cat}));
+	const tabCategories = categories.map((cat) => ({ label: cat }));
 
 	const tabDataSections = categories.map((cat) => {
 		const matchedDishes =
@@ -213,13 +216,21 @@ export default function RestaurantDetailScreen() {
 					<Text style={styles.viewMenuText}>Info</Text>
 				</TouchableOpacity>
 				<View style={styles.line} />
-				<TouchableOpacity
-					style={styles.viewMenuButton}
-					onPress={() => router.push(`/search/restaurants/reservation/${restaurantId}`)}
-				>
-					<Text style={styles.viewMenuText}>Reservation</Text>
-				</TouchableOpacity>
-				<View style={styles.line} />
+				{
+					restaurantDetails?.accept_reservation === "1" && (
+						<>
+						<TouchableOpacity
+							style={styles.viewMenuButton}
+							onPress={() => router.push(`/search/restaurants/reservation/${restaurantId}`)}
+						>
+							<Text style={styles.viewMenuText}>Reservation</Text>
+						</TouchableOpacity>
+						<View style={styles.line} />
+						</>
+						
+					)
+				}
+				
 				<TouchableOpacity
 					style={styles.viewMenuButton}
 					onPress={() => router.push(`/search/restaurants/offer/${restaurantId}`)}
@@ -362,9 +373,8 @@ export default function RestaurantDetailScreen() {
 													...option,
 													dish_id: option.self_id,
 													dish_price: option.option_price,
-													dish_name: `${getParentDishName(option.parent_dish_id).replace(/:$/, '')}: ${
-														option.option_name
-													}`,
+													dish_name: `${getParentDishName(option.parent_dish_id).replace(/:$/, '')}: ${option.option_name
+														}`,
 													dish_description: option.option_description,
 												})
 											}
@@ -445,7 +455,7 @@ const styles = StyleSheet.create({
 		borderRadius: 8,
 		padding: 16,
 		shadowColor: COLORS.cardShadow,
-		shadowOffset: {width: 0, height: 2},
+		shadowOffset: { width: 0, height: 2 },
 		shadowOpacity: 0.1,
 		shadowRadius: 4,
 		elevation: 10,
@@ -528,7 +538,7 @@ const styles = StyleSheet.create({
 		gap: 15,
 		borderRadius: 8,
 		shadowColor: COLORS.cardShadow,
-		shadowOffset: {width: 0, height: 2},
+		shadowOffset: { width: 0, height: 2 },
 		shadowOpacity: 0.1,
 		shadowRadius: 4,
 		elevation: 10,
@@ -550,7 +560,7 @@ const styles = StyleSheet.create({
 	menuSectionWrapper: {
 		backgroundColor: COLORS.white,
 		shadowColor: COLORS.cardShadow,
-		shadowOffset: {width: 0, height: 2},
+		shadowOffset: { width: 0, height: 2 },
 		shadowOpacity: 0.1,
 		shadowRadius: 4,
 		elevation: 10,
