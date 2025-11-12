@@ -1,10 +1,13 @@
-import {ScrollView, StyleSheet, Text, View} from 'react-native';
-import {useSelector} from 'react-redux';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSelector } from 'react-redux';
 import Colors from '../../../../../constants/color';
 
 export default function OfferScreen() {
 	const offerData = useSelector((state) => state.cart.offer);
 	const discountData = useSelector((state) => state.cart.discount);
+
+	console.log("offerData", offerData);
+	console.log("discountData", discountData);
 
 	const offers = offerData?.offer_list || [];
 	const discounts = discountData?.off || [];

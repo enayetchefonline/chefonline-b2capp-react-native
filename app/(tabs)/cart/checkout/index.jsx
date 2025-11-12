@@ -411,6 +411,8 @@ export default function CheckoutScreen() {
 			...(donationNum && donationConfirmed ? {donate_amount: donationNum} : {}),
 		};
 
+		console.log("checkout payload....", JSON.stringify(payload));
+
 		try {
 			const response = await confirmOrder(payload);
 
