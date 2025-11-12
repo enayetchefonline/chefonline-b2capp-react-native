@@ -106,7 +106,7 @@ export default function RegisterScreen() {
 			want_text_message: form.smsConsent,
 		};
 
-		console.log("payload........", payload)
+		// console.log("payload........", payload)
 
 		try {
 			const response = await userRegisterApi(payload);

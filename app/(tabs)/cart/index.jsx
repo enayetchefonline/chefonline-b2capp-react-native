@@ -10,12 +10,12 @@ import CustomPopUp from '../../../components/ui/CustomPopUp';
 // API and Redux actions
 import { carrierBag } from '../../../lib/api';
 import {
-	addItemToCart,
-	setCarryBag,
-	setOrderMode,
-	setSelectedRestaurantDiscountId,
-	setSelectedRestaurantOfferId,
-	updateItemQuantity,
+  addItemToCart,
+  setCarryBag,
+  setOrderMode,
+  setSelectedRestaurantDiscountId,
+  setSelectedRestaurantOfferId,
+  updateItemQuantity,
 } from '../../../store/slices/cartSlice';
 
 // --- FIXED COLOR CONSTANTS ---
@@ -50,8 +50,6 @@ export default function CartScreen() {
   const storeOffer = useSelector((state) => state.cart.offer);
   const storeSelectedDiscountId = useSelector((state) => state.cart.selected_discount_id);
   const storeSelectedOfferId = useSelector((state) => state.cart.selected_offer_id);
-
-  console.log('storeDiscount', storeDiscount);
 
   const availableModes = (storeOrderPolicy?.policy || []).map((p) => p.policy_name);
   const [mode, setMode] = useState(null);

@@ -87,7 +87,7 @@ export default function ProfileScreen() {
 				ip_address: ipAddress ?? '',
 			});
 
-			console.log("delete profile res .....", response)
+			// console.log("delete profile res .....", response)
 
 			if (response?.status === 'success') {
 				setShowDeleteConfirmModal(false);
@@ -147,7 +147,7 @@ export default function ProfileScreen() {
 					<Text style={styles.infoText}>{user.email}</Text>
 					<Text style={styles.infoText}>{user.mobile_no}</Text>
 					<Text style={styles.infoText}>{user.postcode ?? 'Postcode not available'}</Text>
-					{!!ipAddress && <Text style={[styles.infoText, { opacity: 0.7 }]}>IP: {ipAddress}</Text>}
+					{/* {!!ipAddress && <Text style={[styles.infoText, { opacity: 0.7 }]}>IP: {ipAddress}</Text>} */}
 				</View>
 
 				<View style={styles.buttonGrid}>

@@ -62,7 +62,7 @@ export default function SendVerificationCodeScreen() {
       }
 
       const response = await sendOtpApi(payload);
-      console.log('response otp....', response);
+      // console.log('response otp....', response);
 
       if (response?.status === 'success') {
         router.push({

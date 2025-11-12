@@ -414,10 +414,14 @@ export default function CheckoutScreen() {
 		try {
 			const response = await confirmOrder(payload);
 
-			console.log('response.......', response);
+			// console.log('response.......', response);
 
 			if (response.status === 'MySQL server has gone away477' && Object.keys(storeItemList).length > 0) {
 				alert('Order confirmation failed. Please try again.');
+			}
+
+			if (response.status === 'Failure') {
+				alert(response.msg || 'Order failed. Please try again later.');
 			}
 
 			if (response.status && response.status.toUpperCase() === 'SUCCESS') {
