@@ -68,6 +68,7 @@ export default function CheckoutScreen() {
 
 	// const [orderTiming, setOrderTiming] = useState(false);
 	const [orderTiming, setOrderTiming] = useState('Later');
+	const [isOrderingOpen, setIsOrderingOpen] = useState(false);
 
 	// Redux selectors
 	const storeNote = useSelector((state) => state.cart.note);
@@ -187,7 +188,12 @@ export default function CheckoutScreen() {
 	useEffect(() => {
 		const openNow = isRestaurantOpenNow(restaurantSchedule, storeOrderMode);
 		const nextTiming = openNow ? 'ASAP' : 'Later';
-		setOrderTiming(nextTiming);
+
+		setIsOrderingOpen(openNow);   // 👈 keep raw boolean
+		setOrderTiming(nextTiming);   // 👈 keep selected timing label
+
+		console.log("orderTiming (ASAP or Later)....", nextTiming);
+		console.log("isOrderingOpen (boolean)....", openNow);
 	}, [restaurantSchedule, storeOrderMode]);
 
 	console.log("orderTiming (ASAP or Later)....", orderTiming);
@@ -779,36 +785,61 @@ export default function CheckoutScreen() {
 
 
 
+				{/* Order timing */}
 				<View style={styles.orderTimingRow}>
+					{isOrderingOpen ? (
+						<>
+							{/* ASAP (Order Now) */}
+							<TouchableOpacity
+								style={styles.radioOption}
+								activeOpacity={0.8}
+								onPress={() => setOrderTiming('ASAP')}
+							>
+								<Ionicons
+									name={orderTiming === 'ASAP' ? 'radio-button-on' : 'radio-button-off'}
+									size={20}
+									color={Colors.primary}
+								/>
+								<Text style={styles.radioLabel}>ASAP</Text>
+							</TouchableOpacity>
 
-					{/* Order Now */}
-					<View style={styles.radioOption}>
-						<Ionicons
-							name={orderTiming === 'ASAP' ? 'radio-button-on' : 'radio-button-off'}
-							size={20}
-							color={Colors.primary}
-						/>
-						<Text style={styles.radioLabel}>ASAP</Text>
-					</View>
-
-					{/* Pre-order */}
-					<View style={styles.radioOption}>
-						<Ionicons
-							name={orderTiming === 'Later' ? 'radio-button-on' : 'radio-button-off'}
-							size={20}
-							color={Colors.primary}
-						/>
-						<Text style={styles.radioLabel}>Later</Text>
-					</View>
-
+							{/* Later (Pre-order) */}
+							<TouchableOpacity
+								style={styles.radioOption}
+								activeOpacity={0.8}
+								onPress={() => {
+									setOrderTiming('Later');
+									// setTimeSheetVisible(true); // open selector when user chooses later
+								}}
+							>
+								<Ionicons
+									name={orderTiming === 'Later' ? 'radio-button-on' : 'radio-button-off'}
+									size={20}
+									color={Colors.primary}
+								/>
+								<Text style={styles.radioLabel}>Later</Text>
+							</TouchableOpacity>
+						</>
+					) : (
+						// ❌ Ordering closed for ASAP → only show Later, fixed
+						<View style={styles.radioOption}>
+							<Ionicons
+								name="radio-button-on"
+								size={20}
+								color={Colors.primary}
+							/>
+							<Text style={styles.radioLabel}>Later</Text>
+						</View>
+					)}
 				</View>
 
-				<TouchableOpacity style={styles.timeButton} onPress={() => setTimeSheetVisible(true)}>
-					<Text style={styles.timeText}>YOUR SELECTED TIME: {selectedTime}</Text>
-				</TouchableOpacity>
+				{/* Time selection button → only when mode is Later */}
+				{orderTiming === 'Later' && (
+					<TouchableOpacity style={styles.timeButton} onPress={() => setTimeSheetVisible(true)}>
+						<Text style={styles.timeText}>YOUR SELECTED TIME: {selectedTime}</Text>
+					</TouchableOpacity>
+				)}
 			</View>
-
-
 
 
 			{/* Payment */}
@@ -1039,6 +1070,8 @@ const styles = StyleSheet.create({
 		borderRadius: 8,
 		padding: 12,
 		marginBottom: 10,
+		flexDirection: 'column',
+		gap: 5,
 	},
 	noteRow: {
 		flexDirection: 'row',
@@ -1046,15 +1079,6 @@ const styles = StyleSheet.create({
 		marginVertical: 10,
 		gap: 5,
 	},
-	// noteButton: {
-	// 	flexDirection: 'row',
-	// 	alignItems: 'center',
-	// 	paddingVertical: 10,
-	// 	borderRadius: 6,
-	// 	backgroundColor: '#e6e6e6',
-	// 	// width: '50%',
-	// 	textAlign: 'center',
-	// },
 	noteText: {
 		color: Colors.primary,
 		fontWeight: '500',
@@ -1066,7 +1090,7 @@ const styles = StyleSheet.create({
 		paddingVertical: 10,
 		borderRadius: 6,
 		backgroundColor: '#e6e6e6',
-		marginBottom: 10,
+		// marginBottom: 10,
 	},
 	timeText: { color: Colors.primary, fontWeight: '500' },
 
@@ -1074,7 +1098,7 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		justifyContent: 'space-between',
 		alignItems: 'center',
-		marginBottom: 10,
+		// marginBottom: 10,
 		gap: 5,
 	},
 	radioOption: {
