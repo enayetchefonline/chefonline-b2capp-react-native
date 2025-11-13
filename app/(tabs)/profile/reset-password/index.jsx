@@ -1,12 +1,12 @@
-import {useRouter} from 'expo-router';
-import {useState} from 'react';
-import {ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View} from 'react-native';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import {useSelector} from 'react-redux';
+import { useSelector } from 'react-redux';
 import CustomButton from '../../../../components/ui/CustomButton';
 import CustomPopUp from '../../../../components/ui/CustomPopUp';
 import Colors from '../../../../constants/color';
-import {resetPassword} from '../../../../lib/api';
+import { resetPassword } from '../../../../lib/api';
 
 export default function ResetPasswordScreen() {
 	const router = useRouter();
@@ -36,6 +36,10 @@ export default function ResetPasswordScreen() {
 			return alert('Please fill all required fields');
 		}
 
+		if (currentPwd === newPwd) {
+			return alert('New password must be different from the current password');
+		}
+
 		setLoading(true);
 
 		try {
@@ -57,6 +61,7 @@ export default function ResetPasswordScreen() {
 			setLoading(false);
 		}
 	};
+
 
 	// reusable field renderer
 	const renderPasswordField = (label, value, onChange, show, setShow) => (
@@ -126,7 +131,7 @@ const styles = StyleSheet.create({
 		marginBottom: 16,
 		// shadows
 		shadowColor: '#000',
-		shadowOffset: {width: 0, height: 2},
+		shadowOffset: { width: 0, height: 2 },
 		shadowOpacity: 0.1,
 		shadowRadius: 4,
 		elevation: 10,
