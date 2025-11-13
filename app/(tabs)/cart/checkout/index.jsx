@@ -65,6 +65,10 @@ export default function CheckoutScreen() {
 	const [carrierBagPrice, setcarrierBagPrice] = useState(0);
 	const [carrierBagFinalPayload, setCarrierBagFinalPayload] = useState(null);
 
+
+	// const [orderTiming, setOrderTiming] = useState(false);
+	const [orderTiming, setOrderTiming] = useState('Later');
+
 	// Redux selectors
 	const storeNote = useSelector((state) => state.cart.note);
 	const storeVoucher = useSelector((state) => state.cart.voucher);
@@ -80,9 +84,114 @@ export default function CheckoutScreen() {
 	const restaurantDetails = useSelector((state) => state.restaurantDetail.data);
 	const availablePaymentMethods = useSelector((state) => state.restaurantDetail.payment_options);
 
+	const restaurantSchedule = restaurantDetails?.restuarent_schedule?.schedule || [];
+
 	// Controlled input values
 	const [specialNote, setSpecialNoteText] = useState(storeNote || '');
 	const [voucherCode, setVoucherCodeText] = useState(storeVoucher?.vouchar_code || '');
+
+	// Convert "12:00 PM" -> minutes since midnight
+	const parseTimeToMinutes = (timeStr) => {
+		if (!timeStr) return null;
+		const [time, period] = timeStr.split(' '); // "12:00", "PM"
+		if (!time || !period) return null;
+
+		let [hours, minutes] = time.split(':').map(Number);
+
+		const upper = period.toUpperCase();
+		if (upper === 'PM' && hours !== 12) hours += 12;
+		if (upper === 'AM' && hours === 12) hours = 0;
+
+		return hours * 60 + minutes;
+	};
+
+	const isRestaurantOpenNow = (schedule, orderMode) => {
+		if (!Array.isArray(schedule) || schedule.length === 0) {
+			console.log("❌ Schedule is empty");
+			return false;
+		}
+
+		// 🔥 Treat UTC as UK time
+		const now = new Date();
+
+		const jsDay = now.getUTCDay(); // 0-6 (Sun=0)
+		const weekdayId = jsDay === 0 ? 7 : jsDay; // 1-7
+
+		console.log("🇬🇧 UK (UTC) Date & Time:", now.toISOString());
+		console.log("📅 JS UTC Day:", jsDay, "| Weekday ID (1-7):", weekdayId);
+
+		const today = schedule.find((d) => d.weekday_id === weekdayId);
+
+		console.log("📘 Today's Schedule:", JSON.stringify(today, null, 2));
+
+		if (!today) {
+			console.log("❌ No schedule found for today");
+			return false;
+		}
+
+		const nowMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+		console.log("⏱️ Current Minutes (UTC as UK):", nowMinutes);
+
+		// 👉 Only consider Collection / Delivery slots for ordering
+		const normalizedMode = (orderMode || '').toLowerCase();
+
+		const slotsForOrdering = today.list.filter((slot) => {
+			const tf = (slot.timing_for || '').toLowerCase();
+
+			// For Collection/Delivery order we ignore pure Reservation timings
+			if (normalizedMode === 'collection' || normalizedMode === 'delivery') {
+				return tf.includes('collection'); // matches "Collection/Delivery"
+			}
+
+			// Fallback: if we don't know, you can include everything
+			return true;
+		});
+
+		console.log("🎯 Slots used for open/close check:", JSON.stringify(slotsForOrdering, null, 2));
+
+		if (slotsForOrdering.length === 0) {
+			console.log("❌ No ordering slots for this mode");
+			return false;
+		}
+
+		const isOpen = slotsForOrdering.some((slot) => {
+			const open = parseTimeToMinutes(slot.opening_time);
+			const close = parseTimeToMinutes(slot.closing_time);
+
+			console.log(
+				`🔍 Slot => Open: ${slot.opening_time} (${open}), Close: ${slot.closing_time} (${close})`
+			);
+
+			if (open == null || close == null) return false;
+
+			if (close > open) {
+				// Normal hours
+				const inside = nowMinutes >= open && nowMinutes <= close;
+				console.log("  → Normal Hours Match:", inside);
+				return inside;
+			}
+
+			// Cross-midnight
+			const inside = nowMinutes >= open || nowMinutes <= close;
+			console.log("  → Cross-Midnight Match:", inside);
+			return inside;
+		});
+
+		console.log("🏁 FINAL RESULT (ordering open now?) =", isOpen);
+
+		return isOpen;
+	};
+
+
+
+	useEffect(() => {
+		const openNow = isRestaurantOpenNow(restaurantSchedule, storeOrderMode);
+		const nextTiming = openNow ? 'ASAP' : 'Later';
+		setOrderTiming(nextTiming);
+	}, [restaurantSchedule, storeOrderMode]);
+
+	console.log("orderTiming (ASAP or Later)....", orderTiming);
+
 
 	const normalize = (v) => (typeof v === 'string' ? v.trim().toLowerCase() : '');
 	const appliesToMode = (orderType, mode) => {
@@ -103,7 +212,7 @@ export default function CheckoutScreen() {
 	// Fetch carrier bag options and calculate quantity/price when restaurant or cart changes
 	useEffect(() => {
 		async function fetchCarrierBag() {
-			const response = await getCarrierBagData({restId: restaurantId});
+			const response = await getCarrierBagData({ restId: restaurantId });
 
 			let carrierBagQtn = 0;
 			let carrierBagPrice = 0;
@@ -111,7 +220,7 @@ export default function CheckoutScreen() {
 
 			// Find Carry Bag item only
 			const carryBagEntry = Object.values(storeItemList).find(
-				({item}) => item.dish_name?.toLowerCase() === 'carry bag'
+				({ item }) => item.dish_name?.toLowerCase() === 'carry bag'
 			);
 
 			if (carryBagEntry) {
@@ -165,13 +274,13 @@ export default function CheckoutScreen() {
 	}, [availableTimeSlots]);
 
 	// Carry Bag Extraction
-	const carryBagItem = Object.values(storeItemList).find(({item}) => item.dish_name?.toLowerCase() === 'carry bag');
+	const carryBagItem = Object.values(storeItemList).find(({ item }) => item.dish_name?.toLowerCase() === 'carry bag');
 	const carryBagTotal = carryBagItem ? parseFloat(carryBagItem.item.dish_price) * carryBagItem.quantity : 0;
 
 	// Map cart items to array with price/total (excluding carry bag)
 	const itemList = Object.values(storeItemList)
-		.filter(({item}) => item.dish_name?.toLowerCase() !== 'carry bag')
-		.map(({item, quantity}) => ({
+		.filter(({ item }) => item.dish_name?.toLowerCase() !== 'carry bag')
+		.map(({ item, quantity }) => ({
 			id: item.dish_id,
 			name: item.dish_name,
 			price: parseFloat(item.dish_price),
@@ -372,10 +481,10 @@ export default function CheckoutScreen() {
 			return;
 		}
 		const orderList = Object.values(storeItemList)
-			.filter(({item}) => item.dish_name?.toLowerCase() !== 'carry bag')
-			.map(({item, quantity}) => {
+			.filter(({ item }) => item.dish_name?.toLowerCase() !== 'carry bag')
+			.map(({ item, quantity }) => {
 				if (!item.pizza) {
-					return [{DishId: item.dish_id, quantity}];
+					return [{ DishId: item.dish_id, quantity }];
 				} else {
 					const pizza = {
 						...item.pizza,
@@ -383,7 +492,7 @@ export default function CheckoutScreen() {
 						dish_price: parseFloat(item.dish_price).toFixed(2),
 						quantity,
 					};
-					return [{DishId: item.dish_id, quantity, pizza}];
+					return [{ DishId: item.dish_id, quantity, pizza }];
 				}
 			});
 
@@ -408,7 +517,7 @@ export default function CheckoutScreen() {
 			rest_id: restaurantId,
 			carrierBag: carrierBagFinalPayload,
 			platform: Platform.OS === 'ios' ? 1 : 2,
-			...(donationNum && donationConfirmed ? {donate_amount: donationNum} : {}),
+			...(donationNum && donationConfirmed ? { donate_amount: donationNum } : {}),
 		};
 
 		console.log("checkout payload....", JSON.stringify(payload));
@@ -434,7 +543,7 @@ export default function CheckoutScreen() {
 				}
 			} else if (response.status === 'sms_sent') {
 				setVerificationCodePopupVisible(true);
-				setLastOrderPayload({...payload});
+				setLastOrderPayload({ ...payload });
 				setVerificationCode(response.code);
 			} else if (response.status === 'Failed' && Object.keys(storeItemList).length > 0) {
 				setErrorMessage('Order failed. Please try again later.');
@@ -454,12 +563,12 @@ export default function CheckoutScreen() {
 			const redirectURL = response.barclay_response.Body.beginWebPaymentResponse.return.redirectURL;
 			router.push({
 				pathname: '/card-payment-webview',
-				params: {url: redirectURL},
+				params: { url: redirectURL },
 			});
 		} else if (selectedPaymentSettingID == 14) {
 			const apiresponseData = response.barclay_response?.Body?.beginWebPaymentResponse;
 			if (!apiresponseData || !apiresponseData.return) return;
-			const {purchaseAmount, currencyCode} = apiresponseData.return;
+			const { purchaseAmount, currencyCode } = apiresponseData.return;
 			const ryftpayCreateSessionBody = {
 				amount: purchaseAmount || 0,
 				currency: currencyCode || 'GBP',
@@ -488,7 +597,7 @@ export default function CheckoutScreen() {
 		} else if (selectedPaymentSettingID == 16) {
 			const apiresponseData = response.barclay_response?.Body?.beginWebPaymentResponse;
 			if (!apiresponseData || !apiresponseData.return) return;
-			const {totalAmount, currencyCode} = apiresponseData.return;
+			const { totalAmount, currencyCode } = apiresponseData.return;
 			const myGuavaCreateSessionBody = {
 				referenceNumber: response.order_ID || 'Unknown',
 				purpose: 'PURCHASE',
@@ -653,24 +762,54 @@ export default function CheckoutScreen() {
 
 			{/* Notes & Voucher */}
 			<View style={styles.noteCard}>
-				<View style={styles.noteRow}>
-					<TouchableOpacity onPress={() => setNotePopupVisible(true)} style={styles.noteButton}>
+				<View style={styles.orderTimingRow}>
+					<TouchableOpacity onPress={() => setNotePopupVisible(true)} style={styles.radioOption}>
 						<Text style={styles.noteText}>ADD SPECIAL NOTE</Text>
 					</TouchableOpacity>
 					{isVoucherApplied ? (
-						<TouchableOpacity onPress={() => setRemoveVoucherConfirmVisible(true)} style={styles.noteButton}>
+						<TouchableOpacity onPress={() => setRemoveVoucherConfirmVisible(true)} style={styles.radioOption}>
 							<Text style={styles.noteText}>REMOVE VOUCHER</Text>
 						</TouchableOpacity>
 					) : (
-						<TouchableOpacity onPress={() => setVoucherPopupVisible(true)} style={styles.noteButton}>
+						<TouchableOpacity onPress={() => setVoucherPopupVisible(true)} style={styles.radioOption}>
 							<Text style={styles.noteText}>ADD VOUCHER CODE</Text>
 						</TouchableOpacity>
 					)}
 				</View>
+
+
+
+				<View style={styles.orderTimingRow}>
+
+					{/* Order Now */}
+					<View style={styles.radioOption}>
+						<Ionicons
+							name={orderTiming === 'ASAP' ? 'radio-button-on' : 'radio-button-off'}
+							size={20}
+							color={Colors.primary}
+						/>
+						<Text style={styles.radioLabel}>ASAP</Text>
+					</View>
+
+					{/* Pre-order */}
+					<View style={styles.radioOption}>
+						<Ionicons
+							name={orderTiming === 'Later' ? 'radio-button-on' : 'radio-button-off'}
+							size={20}
+							color={Colors.primary}
+						/>
+						<Text style={styles.radioLabel}>Later</Text>
+					</View>
+
+				</View>
+
 				<TouchableOpacity style={styles.timeButton} onPress={() => setTimeSheetVisible(true)}>
 					<Text style={styles.timeText}>YOUR SELECTED TIME: {selectedTime}</Text>
 				</TouchableOpacity>
 			</View>
+
+
+
 
 			{/* Payment */}
 			<View style={styles.paymentCard}>
@@ -696,7 +835,7 @@ export default function CheckoutScreen() {
 			</View>
 
 			<TouchableOpacity
-				style={[styles.confirmBtn, loading && {opacity: 0.6}]}
+				style={[styles.confirmBtn, loading && { opacity: 0.6 }]}
 				onPress={handleOrderSubmit}
 				disabled={loading}
 			>
@@ -816,14 +955,14 @@ export default function CheckoutScreen() {
 					setDonationPopupVisible(false);
 				}}
 			>
-				<View style={{marginBottom: 12}}>
-					<Text style={{marginBottom: 8, fontSize: 14}}>Select donation amount:</Text>
-					<View style={{borderWidth: 1, borderColor: Colors.border, borderRadius: 6}}>
+				<View style={{ marginBottom: 12 }}>
+					<Text style={{ marginBottom: 8, fontSize: 14 }}>Select donation amount:</Text>
+					<View style={{ borderWidth: 1, borderColor: Colors.border, borderRadius: 6 }}>
 						<Picker
 							selectedValue={donationAmount}
 							onValueChange={setDonationAmount}
-							itemStyle={{color: '#333'}}
-							style={{color: '#333'}}
+							itemStyle={{ color: '#333' }}
+							style={{ color: '#333' }}
 						>
 							<Picker.Item label="Select" value="Select" />
 							<Picker.Item label="£1" value="1" />
@@ -867,8 +1006,8 @@ export default function CheckoutScreen() {
 }
 
 const styles = StyleSheet.create({
-	scrollContainer: {paddingBottom: 40},
-	container: {flex: 1, backgroundColor: Colors.background, padding: 16},
+	scrollContainer: { paddingBottom: 40 },
+	container: { flex: 1, backgroundColor: Colors.background, padding: 16 },
 	restaurantTitle: {
 		textAlign: 'center',
 		fontSize: 18,
@@ -883,18 +1022,18 @@ const styles = StyleSheet.create({
 		padding: 12,
 		marginBottom: 10,
 	},
-	itemRow: {flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6},
-	itemText: {color: Colors.text, fontSize: 14},
-	itemPrice: {fontWeight: '600', color: Colors.text},
+	itemRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+	itemText: { color: Colors.text, fontSize: 14 },
+	itemPrice: { fontWeight: '600', color: Colors.text },
 	summaryCard: {
 		backgroundColor: Colors.white,
 		borderRadius: 8,
 		padding: 12,
 		marginBottom: 10,
 	},
-	summaryRow: {flexDirection: 'row', justifyContent: 'space-between', marginVertical: 2},
-	summaryLabel: {fontSize: 14, color: Colors.text},
-	summaryValue: {fontWeight: 'bold', color: Colors.text},
+	summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 2 },
+	summaryLabel: { fontSize: 14, color: Colors.text },
+	summaryValue: { fontWeight: 'bold', color: Colors.text },
 	noteCard: {
 		backgroundColor: Colors.white,
 		borderRadius: 8,
@@ -904,17 +1043,24 @@ const styles = StyleSheet.create({
 	noteRow: {
 		flexDirection: 'row',
 		justifyContent: 'space-between',
-		marginVertical: 12,
+		marginVertical: 10,
 		gap: 5,
 	},
-	noteButton: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		padding: 10,
-		borderRadius: 6,
-		backgroundColor: '#e6e6e6',
+	// noteButton: {
+	// 	flexDirection: 'row',
+	// 	alignItems: 'center',
+	// 	paddingVertical: 10,
+	// 	borderRadius: 6,
+	// 	backgroundColor: '#e6e6e6',
+	// 	// width: '50%',
+	// 	textAlign: 'center',
+	// },
+	noteText: {
+		color: Colors.primary,
+		fontWeight: '500',
+		textAlign: 'center',
+
 	},
-	noteText: {color: Colors.primary, fontWeight: '500'},
 	timeButton: {
 		alignItems: 'center',
 		paddingVertical: 10,
@@ -922,7 +1068,33 @@ const styles = StyleSheet.create({
 		backgroundColor: '#e6e6e6',
 		marginBottom: 10,
 	},
-	timeText: {color: Colors.primary, fontWeight: '500'},
+	timeText: { color: Colors.primary, fontWeight: '500' },
+
+	orderTimingRow: {
+		flexDirection: 'row',
+		justifyContent: 'space-between',
+		alignItems: 'center',
+		marginBottom: 10,
+		gap: 5,
+	},
+	radioOption: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		flex: 1,
+		backgroundColor: '#e6e6e6',
+		padding: 10,
+		borderRadius: 6,
+		justifyContent: 'center',
+	},
+	radioLabel: {
+		marginLeft: 6,
+		fontSize: 13,
+		color: Colors.text,
+	},
+	radioLabelDisabled: {
+		color: Colors.placeholder,
+	},
+
 	paymentCard: {
 		backgroundColor: Colors.white,
 		borderRadius: 8,
@@ -935,7 +1107,7 @@ const styles = StyleSheet.create({
 		color: Colors.text,
 		marginBottom: 10,
 	},
-	paymentRow: {flexDirection: 'row', justifyContent: 'space-around'},
+	paymentRow: { flexDirection: 'row', justifyContent: 'space-around' },
 	paymentBtn: {
 		flexDirection: 'row',
 		alignItems: 'center',
@@ -944,9 +1116,9 @@ const styles = StyleSheet.create({
 		borderRadius: 6,
 		backgroundColor: '#e6e6e6',
 	},
-	selectedBtn: {backgroundColor: Colors.primary},
-	paymentText: {marginLeft: 8, color: '#333', fontWeight: '500'},
-	paymentTextSelected: {color: '#fff'},
+	selectedBtn: { backgroundColor: Colors.primary },
+	paymentText: { marginLeft: 8, color: '#333', fontWeight: '500' },
+	paymentTextSelected: { color: '#fff' },
 	confirmBtn: {
 		backgroundColor: Colors.primary,
 		paddingVertical: 14,
