@@ -91,21 +91,6 @@ export default function CheckoutScreen() {
 	const [specialNote, setSpecialNoteText] = useState(storeNote || '');
 	const [voucherCode, setVoucherCodeText] = useState(storeVoucher?.vouchar_code || '');
 
-	// Convert "12:00 PM" -> minutes since midnight
-	const parseTimeToMinutes = (timeStr) => {
-		if (!timeStr) return null;
-		const [time, period] = timeStr.split(' '); // "12:00", "PM"
-		if (!time || !period) return null;
-
-		let [hours, minutes] = time.split(':').map(Number);
-
-		const upper = period.toUpperCase();
-		if (upper === 'PM' && hours !== 12) hours += 12;
-		if (upper === 'AM' && hours === 12) hours = 0;
-
-		return hours * 60 + minutes;
-	};
-
 	const isRestaurantOpenNow = (schedule, orderMode) => {
 		if (!Array.isArray(schedule) || schedule.length === 0) {
 			console.log("❌ Schedule is empty");
@@ -183,8 +168,6 @@ export default function CheckoutScreen() {
 		return isOpen;
 	};
 
-
-
 	useEffect(() => {
 		const openNow = isRestaurantOpenNow(restaurantSchedule, storeOrderMode);
 		const nextTiming = openNow ? 'ASAP' : 'Later';
@@ -198,8 +181,23 @@ export default function CheckoutScreen() {
 
 	console.log("orderTiming (ASAP or Later)....", orderTiming);
 
+	// Convert "12:00 PM" -> minutes since midnight
+	const parseTimeToMinutes = (timeStr) => {
+		if (!timeStr) return null;
+		const [time, period] = timeStr.split(' '); // "12:00", "PM"
+		if (!time || !period) return null;
+
+		let [hours, minutes] = time.split(':').map(Number);
+
+		const upper = period.toUpperCase();
+		if (upper === 'PM' && hours !== 12) hours += 12;
+		if (upper === 'AM' && hours === 12) hours = 0;
+
+		return hours * 60 + minutes;
+	};
 
 	const normalize = (v) => (typeof v === 'string' ? v.trim().toLowerCase() : '');
+	
 	const appliesToMode = (orderType, mode) => {
 		const t = normalize(orderType);
 		const m = normalize(mode);
