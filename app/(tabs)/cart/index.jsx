@@ -35,7 +35,7 @@ export default function CartScreen() {
   const router = useRouter();
 
   // 👇 get screen height to control the items area's max height
-  const {height: screenHeight} = useWindowDimensions();
+  const { height: screenHeight } = useWindowDimensions();
 
   const [showMinOrderPopup, setShowMinOrderPopup] = useState(false);
   const [showNoOfferDiscountPopup, setShowNoOfferDiscountPopup] = useState(false);
@@ -54,33 +54,7 @@ export default function CartScreen() {
   const availableModes = (storeOrderPolicy?.policy || []).map((p) => p.policy_name);
   const [mode, setMode] = useState(null);
 
-  useEffect(() => {
-    if (restaurantId && Object.keys(storeItemList).length > 0) {
-      loadCarryBag();
-    }
-  }, [restaurantId, storeItemList, loadCarryBag]);
-
-  useEffect(() => {
-    setMode(null);
-  }, [storeItemList]);
-
-  useEffect(() => {
-    if (storeDiscount?.status === 1 && Array.isArray(storeDiscount.off)) {
-      const defaultDiscount = storeDiscount.off.find((d) => d.default === '1');
-      if (defaultDiscount) {
-        dispatch(setSelectedRestaurantDiscountId(defaultDiscount.discount_id));
-      }
-    }
-
-    if (storeOffer?.status === 1 && Array.isArray(storeOffer.offer_list)) {
-      const defaultOffer = storeOffer.offer_list.find((o) => o.default === '1');
-      if (defaultOffer) {
-        dispatch(setSelectedRestaurantOfferId(defaultOffer.id));
-      }
-    }
-  }, [storeDiscount, storeOffer, dispatch]);
-
-  const cartItems = Object.values(storeItemList || {}).map(({item, quantity}) => ({
+  const cartItems = Object.values(storeItemList || {}).map(({ item, quantity }) => ({
     id: item?.dish_id,
     name: item?.dish_name,
     price: parseFloat(item?.dish_price || 0),
@@ -89,31 +63,113 @@ export default function CartScreen() {
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.qty, 0);
 
-  const loadCarryBag = useCallback(async () => {
-    try {
-      const response = await carrierBag({restId: restaurantId});
+  const loadCarryBag = useCallback(
+    async () => {
+      try {
+        const response = await carrierBag({ restId: restaurantId });
 
-      if (response?.restaurant_service_id && parseFloat(response.price) > 0) {
-        const bagId = 'carry_bag';
+        if (response?.restaurant_service_id && parseFloat(response.price) > 0) {
+          const bagId = 'carry_bag';
 
-        // ✅ Prevent adding carry bag again if already exists
-        if (storeItemList[bagId]) {
-          return;
+          // ✅ Prevent adding carry bag again if already exists
+          if (storeItemList[bagId]) {
+            return;
+          }
+
+          const carryBagItem = {
+            dish_id: bagId,
+            dish_name: 'Carry Bag',
+            dish_price: response.price,
+          };
+
+          dispatch(setCarryBag(response));
+          dispatch(addItemToCart(carryBagItem));
         }
-
-        const carryBagItem = {
-          dish_id: bagId,
-          dish_name: 'Carry Bag',
-          dish_price: response.price,
-        };
-
-        dispatch(setCarryBag(response));
-        dispatch(addItemToCart(carryBagItem));
+      } catch (err) {
+        console.error('❌ Failed to load carry bag:', err);
       }
-    } catch (err) {
-      console.error('❌ Failed to load carry bag:', err);
+    },
+    [restaurantId, storeItemList, dispatch]
+  );
+
+  // 👉 Load carry bag when restaurant & cart items exist
+  useEffect(() => {
+    if (restaurantId && Object.keys(storeItemList).length > 0) {
+      loadCarryBag();
     }
-  }, [restaurantId, storeItemList, dispatch]);
+  }, [restaurantId, storeItemList, loadCarryBag]);
+
+  // 👉 Only reset mode when cart becomes completely empty
+  useEffect(() => {
+    if (!storeItemList || Object.keys(storeItemList).length === 0) {
+      setMode(null);
+    }
+  }, [storeItemList]);
+
+  // 👉 Handle:
+  // 1) Auto-select single policy
+  // 2) Auto-select single applicable discount/offer
+  useEffect(() => {
+    // --- 1) Auto-select order policy if only one and cart has items ---
+    if (!mode && availableModes.length === 1 && Object.keys(storeItemList || {}).length > 0) {
+      const singleMode = availableModes[0];
+      setMode(singleMode);
+      dispatch(setOrderMode(singleMode));
+    }
+
+    // If mode not selected yet (or no items), no need to evaluate discounts/offers
+    if (!mode || subtotal <= 0) {
+      return;
+    }
+
+    // --- 2) Calculate applicable discounts for current mode + subtotal ---
+    let applicableDiscountsLocal = [];
+    if (storeDiscount?.status === 1 && Array.isArray(storeDiscount.off)) {
+      applicableDiscountsLocal = storeDiscount.off.filter((d) => {
+        const orderType = d.order_type?.toLowerCase();
+        return (
+          d.active === 1 &&
+          (orderType === mode.toLowerCase() || orderType === 'both') &&
+          parseFloat(d.eligible_amount || 0) <= subtotal
+        );
+      });
+    }
+
+    // --- 3) Calculate applicable offers for current subtotal ---
+    let applicableOffersLocal = [];
+    if (storeOffer?.status === 1 && Array.isArray(storeOffer.offer_list)) {
+      applicableOffersLocal = storeOffer.offer_list.filter((o) => {
+        return o.active === 1 && parseFloat(o.eligible_amount || 0) <= subtotal;
+      });
+    }
+
+    // --- 4) Auto-select only if there is exactly ONE option in total (one discount OR one offer) ---
+    if (!storeSelectedDiscountId && !storeSelectedOfferId) {
+      const totalOptions = applicableDiscountsLocal.length + applicableOffersLocal.length;
+
+      // If policy have only discount / only offer (total 1 option) → auto select
+      if (totalOptions === 1) {
+        if (applicableDiscountsLocal.length === 1) {
+          const onlyDiscount = applicableDiscountsLocal[0];
+          dispatch(setSelectedRestaurantDiscountId(onlyDiscount.discount_id));
+        } else if (applicableOffersLocal.length === 1) {
+          const onlyOffer = applicableOffersLocal[0];
+          dispatch(setSelectedRestaurantOfferId(onlyOffer.id));
+        }
+      }
+      // If multiple options (multiple discounts/offers) → user must select, do nothing
+    }
+  }, [
+    availableModes,
+    mode,
+    storeItemList,
+    dispatch,
+    storeDiscount,
+    storeOffer,
+    storeSelectedDiscountId,
+    storeSelectedOfferId,
+    subtotal,
+  ]);
 
   const applicableDiscounts = (storeDiscount?.status === 1 ? storeDiscount.off : []).filter((d) => {
     const orderType = d.order_type?.toLowerCase();
@@ -129,14 +185,14 @@ export default function CartScreen() {
   });
 
   const increaseQty = (id, currentQty) => {
-    dispatch(updateItemQuantity({itemId: id, quantity: currentQty + 1}));
+    dispatch(updateItemQuantity({ itemId: id, quantity: currentQty + 1 }));
   };
 
   const decreaseQty = (id, currentQty) => {
     if (currentQty > 1) {
-      dispatch(updateItemQuantity({itemId: id, quantity: currentQty - 1}));
+      dispatch(updateItemQuantity({ itemId: id, quantity: currentQty - 1 }));
     } else {
-      dispatch(updateItemQuantity({itemId: id, quantity: 0}));
+      dispatch(updateItemQuantity({ itemId: id, quantity: 0 }));
     }
   };
 
@@ -151,7 +207,7 @@ export default function CartScreen() {
       if (!token) {
         router.replace({
           pathname: '/profile/login',
-          params: {redirect: '/cart'},
+          params: { redirect: '/cart' },
         });
         return;
       }
@@ -206,12 +262,12 @@ export default function CartScreen() {
       {cartItems.length === 0 ? (
         <View style={styles.emptyCart}>
           <Ionicons name="cart-outline" size={200} color={COLORS.secondaryText} />
-          <Text style={{color: COLORS.secondaryText, fontSize: 20, textTransform: 'uppercase'}}>
+          <Text style={{ color: COLORS.secondaryText, fontSize: 20, textTransform: 'uppercase' }}>
             Your cart is empty
           </Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{paddingBottom: 150, flexGrow: 1}} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={{ paddingBottom: 150, flexGrow: 1 }} showsVerticalScrollIndicator={false}>
           {/* Order Type Toggle */}
           <View style={styles.toggleRow}>
             {availableModes.map((type) => (
@@ -233,8 +289,8 @@ export default function CartScreen() {
             <ScrollView
               nestedScrollEnabled
               showsVerticalScrollIndicator={false}
-              style={{maxHeight: screenHeight * 0.5}}  // 👈 controls visible height
-              contentContainerStyle={{paddingBottom: 4}}
+              style={{ maxHeight: screenHeight * 0.5 }} // 👈 controls visible height
+              contentContainerStyle={{ paddingBottom: 4 }}
             >
               {cartItems.map((item) => (
                 <View key={item.id} style={styles.itemRow}>
@@ -348,7 +404,7 @@ export default function CartScreen() {
         }}
       />
 
-      <View style={{position: 'absolute', bottom: 16, left: 0, right: 0}}>
+      <View style={{ position: 'absolute', bottom: 16, left: 0, right: 0 }}>
         <Snackbar
           visible={visibleSnackBar}
           duration={3000}
@@ -372,8 +428,8 @@ export default function CartScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: COLORS.background, padding: 16},
-  toggleRow: {flexDirection: 'row', justifyContent: 'center', paddingVertical: 12},
+  container: { flex: 1, backgroundColor: COLORS.background, padding: 16 },
+  toggleRow: { flexDirection: 'row', justifyContent: 'center', paddingVertical: 12 },
   toggleBtn: {
     paddingVertical: 8,
     paddingHorizontal: 16,
@@ -381,9 +437,9 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginHorizontal: 8,
   },
-  toggleBtnActive: {backgroundColor: COLORS.primary},
-  toggleText: {fontSize: 12, color: COLORS.text},
-  toggleTextActive: {color: COLORS.white},
+  toggleBtnActive: { backgroundColor: COLORS.primary },
+  toggleText: { fontSize: 12, color: COLORS.text },
+  toggleTextActive: { color: COLORS.white },
 
   // listCard bg stays the same (white)
   listCard: {
@@ -402,8 +458,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: COLORS.border,
   },
-  itemText: {flex: 1, fontSize: 14, color: COLORS.text},
-  itemActions: {flexDirection: 'row', alignItems: 'center'},
+  itemText: { flex: 1, fontSize: 14, color: COLORS.text },
+  itemActions: { flexDirection: 'row', alignItems: 'center' },
   qtyBtn: {
     borderWidth: 1,
     borderColor: COLORS.primary,
@@ -411,12 +467,12 @@ const styles = StyleSheet.create({
     padding: 4,
     marginHorizontal: 6,
   },
-  priceText: {fontSize: 14, color: COLORS.text},
+  priceText: { fontSize: 14, color: COLORS.text },
 
-  section: {marginBottom: 16, backgroundColor: COLORS.white, borderRadius: 8, padding: 16},
-  sectionTitle: {fontSize: 16, fontWeight: 'bold', marginBottom: 8, color: COLORS.text},
-  radioItem: {flexDirection: 'row', alignItems: 'center', marginBottom: 8},
-  radioLabel: {fontSize: 14, color: COLORS.text},
+  section: { marginBottom: 16, backgroundColor: COLORS.white, borderRadius: 8, padding: 16 },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 8, color: COLORS.text },
+  radioItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  radioLabel: { fontSize: 14, color: COLORS.text },
 
   bottomBar: {
     position: 'absolute',
@@ -431,19 +487,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
     shadowColor: COLORS.shadow,
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 10,
   },
-  summaryText: {color: COLORS.white, fontSize: 12, lineHeight: 18},
+  summaryText: { color: COLORS.white, fontSize: 12, lineHeight: 18 },
   proceedTouchable: {
     backgroundColor: '#A70000',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 4,
   },
-  proceedText: {color: COLORS.white, fontSize: 14, fontWeight: '600'},
+  proceedText: { color: COLORS.white, fontSize: 14, fontWeight: '600' },
 
   emptyCart: {
     flex: 1,

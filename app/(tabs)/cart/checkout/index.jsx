@@ -416,7 +416,7 @@ export default function CheckoutScreen() {
 		try {
 			const response = await confirmOrder(payload);
 
-			// console.log('response.......', response);
+			console.log('confirmOrder response.......', response);
 
 			if (response.status === 'MySQL server has gone away477' && Object.keys(storeItemList).length > 0) {
 				alert('Order confirmation failed. Please try again.');
