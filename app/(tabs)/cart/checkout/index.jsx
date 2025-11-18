@@ -197,7 +197,7 @@ export default function CheckoutScreen() {
 	};
 
 	const normalize = (v) => (typeof v === 'string' ? v.trim().toLowerCase() : '');
-	
+
 	const appliesToMode = (orderType, mode) => {
 		const t = normalize(orderType);
 		const m = normalize(mode);
@@ -502,6 +502,38 @@ export default function CheckoutScreen() {
 
 		const selectedOrderPolicy = restaurantDetails?.order_policy?.policy?.find((p) => p.policy_name === storeOrderMode);
 		const orderPolicyId = selectedOrderPolicy?.policy_id || '';
+		// const payload = {
+		// 	user_id: authUser?.userid || '',
+		// 	order_policy_id: orderPolicyId,
+		// 	OrderList: orderList,
+		// 	post_code: authUser?.postcode || '',
+		// 	address: authUser?.address1 || '',
+		// 	city: authUser?.town || '',
+		// 	payment_option: paymentMethod === 'Card' ? 12 : 0,
+		// 	total_amount: subtotal.toFixed(2),
+		// 	grand_total: finalTotalWithCarryBag.toFixed(2),
+		// 	discount_id: storeVoucher?.id ? '' : storeSelectedDiscountId || '',
+		// 	voucher_id: storeVoucher?.id || '',
+		// 	offer_id: storeVoucher?.id ? '' : storeSelectedOfferId || '',
+		// 	pre_order_delivery_time: selectedTime,
+		// 	comments: specialNote,
+		// 	delivery_charge: deliveryCharge.toFixed(2),
+		// 	rest_id: restaurantId,
+		// 	carrierBag: carrierBagFinalPayload,
+		// 	platform: Platform.OS === 'ios' ? 1 : 2,
+		// 	...(donationNum && donationConfirmed ? { donate_amount: donationNum } : {}),
+		// };
+
+
+		// build offer payload in required format: [{"offer_id": 1661}]
+		let offerPayload = '';
+
+		if (!storeVoucher?.id && storeSelectedOfferId) {
+			offerPayload = JSON.stringify([
+				{ offer_id: Number(storeSelectedOfferId) },
+			]);
+		}
+
 		const payload = {
 			user_id: authUser?.userid || '',
 			order_policy_id: orderPolicyId,
@@ -514,7 +546,8 @@ export default function CheckoutScreen() {
 			grand_total: finalTotalWithCarryBag.toFixed(2),
 			discount_id: storeVoucher?.id ? '' : storeSelectedDiscountId || '',
 			voucher_id: storeVoucher?.id || '',
-			offer_id: storeVoucher?.id ? '' : storeSelectedOfferId || '',
+			// ✅ now in format: [{"offer_id": 1661}] or ""
+			offer_id: offerPayload,
 			pre_order_delivery_time: selectedTime,
 			comments: specialNote,
 			delivery_charge: deliveryCharge.toFixed(2),
@@ -523,6 +556,9 @@ export default function CheckoutScreen() {
 			platform: Platform.OS === 'ios' ? 1 : 2,
 			...(donationNum && donationConfirmed ? { donate_amount: donationNum } : {}),
 		};
+
+
+
 
 		console.log("checkout payload....", JSON.stringify(payload));
 
