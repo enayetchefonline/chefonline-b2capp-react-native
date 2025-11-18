@@ -1,5 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Network from 'expo-network';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -8,6 +7,7 @@ import { useDispatch, useSelector } from 'react-redux';
 
 import CustomButton from '../../../components/ui/CustomButton';
 import Colors from '../../../constants/color';
+import { useIpAddress } from '../../../hooks/useIpAddress';
 import { deleteProfileRequest } from '../../../lib/api';
 import { setUser } from '../../../store/slices/authSlice';
 
@@ -26,8 +26,8 @@ export default function ProfileScreen() {
 	// Dialog for API responses
 	const [dialog, setDialog] = useState({ visible: false, message: '', isError: false });
 
-	// ⬇️ FIX: no TS generic in .jsx
-	const [ipAddress, setIpAddress] = useState(null);
+	// IP address via reusable hook
+	const { ipAddress } = useIpAddress();
 
 	useEffect(() => {
 		const loadUserData = async () => {
@@ -43,27 +43,6 @@ export default function ProfileScreen() {
 		};
 		loadUserData();
 	}, [dispatch, router]);
-
-	// Get device/local IP (fallback to public IP if needed)
-	useEffect(() => {
-		const getIp = async () => {
-			try {
-				const localIp = await Network.getIpAddressAsync();
-				if (localIp && localIp !== '0.0.0.0') {
-					setIpAddress(localIp);
-					return;
-				}
-			} catch { }
-			try {
-				const res = await fetch('https://api.ipify.org?format=json');
-				const data = await res.json();
-				if (data?.ip) setIpAddress(data.ip);
-			} catch {
-				setIpAddress(null);
-			}
-		};
-		getIp();
-	}, []);
 
 	const handleSignOut = async () => {
 		await AsyncStorage.removeItem('accessToken');
@@ -160,7 +139,12 @@ export default function ProfileScreen() {
 			</View>
 
 			{/* Delete Confirmation Modal (type DELETE) */}
-			<Modal visible={showDeleteConfirmModal} transparent animationType="fade" onRequestClose={() => setShowDeleteConfirmModal(false)}>
+			<Modal
+				visible={showDeleteConfirmModal}
+				transparent
+				animationType="fade"
+				onRequestClose={() => setShowDeleteConfirmModal(false)}
+			>
 				<View style={styles.modalOverlay}>
 					<View style={styles.modalContentPolished}>
 						<Ionicons name="warning-outline" size={48} color={Colors.danger} style={styles.modalIcon} />
@@ -180,7 +164,12 @@ export default function ProfileScreen() {
 						/>
 
 						<View style={styles.modalBtnRowPolished}>
-							<TouchableOpacity style={[styles.modalBtn, styles.cancelBtn]} onPress={() => setShowDeleteConfirmModal(false)} disabled={deleteLoading} activeOpacity={0.8}>
+							<TouchableOpacity
+								style={[styles.modalBtn, styles.cancelBtn]}
+								onPress={() => setShowDeleteConfirmModal(false)}
+								disabled={deleteLoading}
+								activeOpacity={0.8}
+							>
 								<Text style={styles.cancelBtnText}>CANCEL</Text>
 							</TouchableOpacity>
 
@@ -207,7 +196,9 @@ export default function ProfileScreen() {
 							color={dialog.isError ? Colors.danger : Colors.primary}
 							style={styles.modalIcon}
 						/>
-						<Text style={styles.modalTitlePolished}>{dialog.isError ? 'Delete Failed' : 'Account Deletion Pending'}</Text>
+						<Text style={styles.modalTitlePolished}>
+							{dialog.isError ? 'Delete Failed' : 'Account Deletion Pending'}
+						</Text>
 						<Text style={styles.modalMessagePolished}>{dialog.message}</Text>
 						<View style={styles.modalBtnRowPolished}>
 							<TouchableOpacity style={[styles.modalBtn, styles.deleteBtn]} onPress={handleDialogOk}>
@@ -223,7 +214,19 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
 	container: { flex: 1, backgroundColor: Colors.background, padding: 20, alignItems: 'center', justifyContent: 'center' },
-	profileContainer: { backgroundColor: Colors.white, borderRadius: 8, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#ccc', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 10 },
+	profileContainer: {
+		backgroundColor: Colors.white,
+		borderRadius: 8,
+		padding: 16,
+		marginBottom: 16,
+		borderWidth: 1,
+		borderColor: '#ccc',
+		shadowColor: '#000',
+		shadowOffset: { width: 0, height: 2 },
+		shadowOpacity: 0.1,
+		shadowRadius: 4,
+		elevation: 10,
+	},
 	profileMain: { alignItems: 'center', marginVertical: 30 },
 	profileIcon: { marginBottom: 20 },
 	nameText: { fontSize: 18, fontWeight: '600', color: Colors.text, marginBottom: 6 },
@@ -231,11 +234,39 @@ const styles = StyleSheet.create({
 	buttonGrid: { width: '100%', flexWrap: 'wrap', flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
 
 	modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', alignItems: 'center' },
-	modalContentPolished: { width: 320, backgroundColor: Colors.white, borderRadius: 18, paddingVertical: 28, paddingHorizontal: 24, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.18, shadowRadius: 16, elevation: 15 },
+	modalContentPolished: {
+		width: 320,
+		backgroundColor: Colors.white,
+		borderRadius: 18,
+		paddingVertical: 28,
+		paddingHorizontal: 24,
+		alignItems: 'center',
+		shadowColor: '#000',
+		shadowOffset: { width: 0, height: 8 },
+		shadowOpacity: 0.18,
+		shadowRadius: 16,
+		elevation: 15,
+	},
 	modalIcon: { marginBottom: 12 },
 	modalTitlePolished: { fontSize: 20, fontWeight: 'bold', color: Colors.danger, marginBottom: 8, textAlign: 'center' },
-	modalMessagePolished: { fontSize: 15, color: Colors.text, textAlign: 'center', marginBottom: 16, marginHorizontal: 4, lineHeight: 22 },
-	deleteInput: { width: '100%', height: 44, borderWidth: 1, borderColor: '#DADCE0', borderRadius: 8, paddingHorizontal: 12, marginBottom: 20, color: Colors.text },
+	modalMessagePolished: {
+		fontSize: 15,
+		color: Colors.text,
+		textAlign: 'center',
+		marginBottom: 16,
+		marginHorizontal: 4,
+		lineHeight: 22,
+	},
+	deleteInput: {
+		width: '100%',
+		height: 44,
+		borderWidth: 1,
+		borderColor: '#DADCE0',
+		borderRadius: 8,
+		paddingHorizontal: 12,
+		marginBottom: 20,
+		color: Colors.text,
+	},
 	modalBtnRowPolished: { flexDirection: 'row', width: '100%', justifyContent: 'space-between', gap: 14 },
 	modalBtn: { flex: 1, height: 44, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
 	cancelBtn: { backgroundColor: '#F0F0F0', borderWidth: 1, borderColor: '#D8D8D8' },

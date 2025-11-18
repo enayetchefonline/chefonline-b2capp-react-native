@@ -17,6 +17,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
 import CustomPopUp from '../../../../components/ui/CustomPopUp';
 import Colors from '../../../../constants/color';
+import { useIpAddress } from '../../../../hooks/useIpAddress';
 import { checkVoucher, confirmOrder, getCarrierBagData } from '../../../../lib/api';
 import { getmyguavapay, myguavapayPaymentUpdate } from '../../../../lib/utils/myguava-api';
 import { getAvailableTimeSlots } from '../../../../lib/utils/restaurantSchedule';
@@ -85,11 +86,19 @@ export default function CheckoutScreen() {
 	const restaurantDetails = useSelector((state) => state.restaurantDetail.data);
 	const availablePaymentMethods = useSelector((state) => state.restaurantDetail.payment_options);
 
+
+
 	const restaurantSchedule = restaurantDetails?.restuarent_schedule?.schedule || [];
 
 	// Controlled input values
 	const [specialNote, setSpecialNoteText] = useState(storeNote || '');
 	const [voucherCode, setVoucherCodeText] = useState(storeVoucher?.vouchar_code || '');
+
+
+	// IP address via reusable hook
+	const { ipAddress } = useIpAddress();
+
+	console.log("ipAddress", ipAddress)
 
 	const isRestaurantOpenNow = (schedule, orderMode) => {
 		if (!Array.isArray(schedule) || schedule.length === 0) {
@@ -554,6 +563,7 @@ export default function CheckoutScreen() {
 			rest_id: restaurantId,
 			carrierBag: carrierBagFinalPayload,
 			platform: Platform.OS === 'ios' ? 1 : 2,
+			ip_address: ipAddress || '',
 			...(donationNum && donationConfirmed ? { donate_amount: donationNum } : {}),
 		};
 
