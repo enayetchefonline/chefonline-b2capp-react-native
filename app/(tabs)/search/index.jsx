@@ -1,7 +1,7 @@
-import {MaterialIcons} from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import {useRouter} from 'expo-router';
-import {useEffect, useState} from 'react';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
 	ActivityIndicator,
 	Image,
@@ -16,15 +16,15 @@ import {
 	TouchableOpacity,
 	View,
 } from 'react-native';
-import {Snackbar} from 'react-native-paper';
+import { Snackbar } from 'react-native-paper';
 import Swiper from 'react-native-swiper';
-import {Ionicons} from 'react-native-vector-icons';
-import {useDispatch} from 'react-redux';
+import { Ionicons } from 'react-native-vector-icons';
+import { useDispatch } from 'react-redux';
 import CustomButton from '../../../components/ui/CustomButton';
 import Colors from '../../../constants/color';
-import {cuisineListApi, getSliderImageApi, searchRestaurantsApi} from '../../../lib/api';
-import {setCuisine, setOrderType, setSearchText} from '../../../store/slices/cartSlice';
-import {clearRestaurantList, setRestaurantList} from '../../../store/slices/restaurantListSlice';
+import { cuisineListApi, getSliderImageApi, searchRestaurantsApi } from '../../../lib/api';
+import { setCuisine, setOrderType, setSearchText } from '../../../store/slices/cartSlice';
+import { clearRestaurantList, setRestaurantList } from '../../../store/slices/restaurantListSlice';
 
 // Helper to fetch postcode from coordinates
 const getPostcodeFromCoords = async (latitude, longitude) => {
@@ -87,7 +87,7 @@ export default function SearchScreen() {
 
 			// ==== FOR PRODUCTION, COMMENT OUT THE ABOVE BLOCK AND UNCOMMENT BELOW ====
 
-			let {status} = await Location.requestForegroundPermissionsAsync();
+			let { status } = await Location.requestForegroundPermissionsAsync();
 			if (status !== 'granted') {
 				setSnackBarMessage('Permission to access location was denied');
 				setVisibleSnackBar(true);
@@ -130,43 +130,77 @@ export default function SearchScreen() {
 		}
 	};
 
-	const fetchSearchRestaurant = async () => {
+	const fetchSearchRestaurant = async (pageNo = 1) => {
 		const data = {
 			searchText: restaurantName,
 			cuisineType: selectedCuisine || 'all',
 			orderType: activeTab,
-			pageNo: 1,
+			pageNo, // keep pagination support
 		};
 
 		try {
 			const response = await searchRestaurantsApi(data);
+			console.log('response.....', JSON.stringify(response));
 
-			if (response?.app && Array.isArray(response.app)) {
-				if (response.app[0]?.status === 'Failed') {
-					setSnackBarMessage(`We found 0 restaurant in ${restaurantName}`.toUpperCase());
-					setVisibleSnackBar(true);
-					// setSearchResult([]);
-					dispatch(setRestaurantList([]));
-					return {success: false};
-				} else {
-					dispatch(setRestaurantList(response.app));
-					// setSearchResult(response.app);
-					return {success: true, data: response.app};
-				}
-			} else {
-				setSnackBarMessage('Invalid response format');
+			// Raw list from API (pagination-friendly)
+			const rawRestaurants = Array.isArray(response?.app) ? response.app : [];
+
+			// API “no result” pattern (some endpoints send app[0].status = 'Failed')
+			if (rawRestaurants.length === 0 || rawRestaurants[0]?.status === 'Failed') {
+				setSnackBarMessage(`We found 0 restaurant in ${restaurantName}`.toUpperCase());
 				setVisibleSnackBar(true);
-				// setSearchResult([]);
-				return {success: false};
+				dispatch(setRestaurantList([]));
+				return { success: false };
 			}
+
+			// ✅ Apply filters:
+			// - chefonline_coming_soon = 0
+			// - restaurant_status = 'Live'
+			// - today_shift_status is [] / missing OR every item has is_whole_shift_close = 0
+			const filteredRestaurants = rawRestaurants.filter((rest) => {
+				const comingSoonOk = String(rest.chefonline_coming_soon) === '0';
+				const statusOk = rest.restaurant_status === 'Live';
+
+				const shift = rest.today_shift_status;
+
+				// today_shift_status missing or empty -> OK
+				if (!Array.isArray(shift) || shift.length === 0) {
+					return comingSoonOk && statusOk;
+				}
+
+				// otherwise: all items must be open
+				const allOpen = shift.every((s) => Number(s.is_whole_shift_close) === 0);
+
+				return comingSoonOk && statusOk && allOpen;
+			});
+
+			console.log('filtered restaurants count:', filteredRestaurants.length);
+
+			// If after filter nothing left, treat as 0 result
+			if (filteredRestaurants.length === 0) {
+				setSnackBarMessage(`We found 0 restaurant in ${restaurantName}`.toUpperCase());
+				setVisibleSnackBar(true);
+				dispatch(setRestaurantList([]));
+				return { success: false };
+			}
+
+			// ✅ Use filtered list in Redux + navigation
+			dispatch(setRestaurantList(filteredRestaurants));
+
+			return {
+				success: true,
+				data: filteredRestaurants,
+				// You can pass pagination info here later if API gives it (e.g. response.total_page, etc.)
+			};
 		} catch (error) {
 			console.error('Search error:', error);
 			setSnackBarMessage('Something went wrong while searching');
 			setVisibleSnackBar(true);
-			// setSearchResult([]);
-			return {success: false};
+			dispatch(setRestaurantList([]));
+			return { success: false };
 		}
 	};
+
 
 	const handleFindRestaurant = async () => {
 		setIsLoading(true);
@@ -175,7 +209,7 @@ export default function SearchScreen() {
 		dispatch(setCuisine(selectedCuisine || 'all'));
 		dispatch(setOrderType(activeTab));
 
-		const result = await fetchSearchRestaurant(); // Wait for result
+		const result = await fetchSearchRestaurant(); // uses pageNo = 1
 		if (result?.success) {
 			router.push(`/search/restaurants/?searchResult=${JSON.stringify(result.data)}`);
 		}
@@ -205,8 +239,8 @@ export default function SearchScreen() {
 								showsPagination={true}
 								dotColor="#ccc"
 								activeDotColor="#EC1839"
-								style={{borderRadius: 10}}
-								paginationStyle={{top: 165}}
+								style={{ borderRadius: 10 }}
+								paginationStyle={{ top: 165 }}
 							>
 								{sliderImage.map((img, idx) => (
 									<Image
@@ -256,7 +290,7 @@ export default function SearchScreen() {
 										name="my-location"
 										size={22}
 										color={locationLoading ? '#ccc' : '#EC1839'}
-										style={{paddingLeft: 8}}
+										style={{ paddingLeft: 8 }}
 									/>
 								</TouchableOpacity>
 							</View>
@@ -342,7 +376,7 @@ export default function SearchScreen() {
 						}}
 					>
 						{/* Force upper case here */}
-						<Text style={{color: '#fff'}}>{snackBarMessage.toUpperCase()}</Text>
+						<Text style={{ color: '#fff' }}>{snackBarMessage.toUpperCase()}</Text>
 					</Snackbar>
 				</View>
 			</ScrollView>
