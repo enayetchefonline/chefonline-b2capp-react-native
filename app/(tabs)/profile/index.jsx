@@ -8,7 +8,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import CustomButton from '../../../components/ui/CustomButton';
 import Colors from '../../../constants/color';
 import { useIpAddress } from '../../../hooks/useIpAddress';
-import { deleteProfileRequest } from '../../../lib/api';
+import { deleteProfileRequest, verifyDeleteProfileOtp } from '../../../lib/api'; // 👈 NEW IMPORT
 import { setUser } from '../../../store/slices/authSlice';
 
 export default function ProfileScreen() {
@@ -23,7 +23,13 @@ export default function ProfileScreen() {
 	const [deleteConfirmText, setDeleteConfirmText] = useState('');
 	const [deleteLoading, setDeleteLoading] = useState(false);
 
-	// Dialog for API responses
+	// OTP modal
+	const [showOtpModal, setShowOtpModal] = useState(false);
+	const [otpCode, setOtpCode] = useState('');
+	const [otpLoading, setOtpLoading] = useState(false);
+	const [otpSecondsLeft, setOtpSecondsLeft] = useState(180); // 3 min
+
+	// Dialog for final API responses
 	const [dialog, setDialog] = useState({ visible: false, message: '', isError: false });
 
 	// IP address via reusable hook
@@ -44,6 +50,31 @@ export default function ProfileScreen() {
 		loadUserData();
 	}, [dispatch, router]);
 
+	// OTP countdown timer
+	useEffect(() => {
+		if (!showOtpModal) return;
+
+		const interval = setInterval(() => {
+			setOtpSecondsLeft((prev) => {
+				if (prev <= 1) {
+					clearInterval(interval);
+					return 0;
+				}
+				return prev - 1;
+			});
+		}, 1000);
+
+		return () => clearInterval(interval);
+	}, [showOtpModal]);
+
+	const formatTime = (secs) => {
+		const m = Math.floor(secs / 60)
+			.toString()
+			.padStart(2, '0');
+		const s = (secs % 60).toString().padStart(2, '0');
+		return `${m}:${s}`;
+	};
+
 	const handleSignOut = async () => {
 		await AsyncStorage.removeItem('accessToken');
 		await AsyncStorage.removeItem('userData');
@@ -56,6 +87,7 @@ export default function ProfileScreen() {
 		setShowDeleteConfirmModal(true);
 	};
 
+	// STEP 1: Send OTP when user types DELETE
 	const handleConfirmDelete = async () => {
 		if (deleteConfirmText.trim() !== 'DELETE') return;
 
@@ -66,20 +98,20 @@ export default function ProfileScreen() {
 				ip_address: ipAddress ?? '',
 			});
 
-			// console.log("delete profile res .....", response)
+			console.log('delete profile res .....', response);
 
 			if (response?.status === 'success') {
+				// ✅ OTP sent successfully – open OTP popup like the screenshot
 				setShowDeleteConfirmModal(false);
-				setDialog({
-					visible: true,
-					message: response.msg || 'Your account will be deleted soon.',
-					isError: false,
-				});
+				setOtpCode('');
+				setOtpSecondsLeft(180); // reset timer
+				setShowOtpModal(true);
+				// no dialog here
 			} else {
 				setShowDeleteConfirmModal(false);
 				setDialog({
 					visible: true,
-					message: response?.msg || 'Failed to delete profile',
+					message: response?.msg || 'Failed to send OTP for profile deletion',
 					isError: true,
 				});
 			}
@@ -87,7 +119,7 @@ export default function ProfileScreen() {
 			setShowDeleteConfirmModal(false);
 			setDialog({
 				visible: true,
-				message: error?.message || 'Failed to delete profile',
+				message: error?.message || 'Failed to send OTP for profile deletion',
 				isError: true,
 			});
 		} finally {
@@ -95,8 +127,59 @@ export default function ProfileScreen() {
 		}
 	};
 
+	// STEP 2: Verify OTP and actually delete profile
+	const handleVerifyOtp = async () => {
+		if (!otpCode.trim()) return;
+		if (otpSecondsLeft === 0) {
+			setShowOtpModal(false);
+			setDialog({
+				visible: true,
+				message: 'OTP has expired. Please try again.',
+				isError: true,
+			});
+			return;
+		}
+
+		setOtpLoading(true);
+		try {
+			const response = await verifyDeleteProfileOtp({
+				user_id: user.userid,
+				ip_address: ipAddress ?? '',
+				otp: otpCode.trim(),
+			});
+
+			console.log('verify otp res .....', response);
+
+			setShowOtpModal(false);
+
+			if (response?.status === 'success') {
+				setDialog({
+					visible: true,
+					message: response.msg || 'Your account will be deleted soon.',
+					isError: false,
+				});
+			} else {
+				setDialog({
+					visible: true,
+					message: response?.msg || 'Invalid OTP. Please try again.',
+					isError: true,
+				});
+			}
+		} catch (error) {
+			setShowOtpModal(false);
+			setDialog({
+				visible: true,
+				message: error?.message || 'Failed to verify OTP',
+				isError: true,
+			});
+		} finally {
+			setOtpLoading(false);
+		}
+	};
+
 	const handleDialogOk = async () => {
 		setDialog((prev) => ({ ...prev, visible: false }));
+		// On successful delete → logout & go to login
 		if (!dialog.isError) {
 			await AsyncStorage.removeItem('accessToken');
 			await AsyncStorage.removeItem('userData');
@@ -114,6 +197,7 @@ export default function ProfileScreen() {
 	}
 
 	const canDelete = deleteConfirmText.trim() === 'DELETE';
+	const canVerifyOtp = otpCode.trim().length > 0 && otpSecondsLeft > 0 && !otpLoading;
 
 	return (
 		<View style={styles.container}>
@@ -126,7 +210,6 @@ export default function ProfileScreen() {
 					<Text style={styles.infoText}>{user.email}</Text>
 					<Text style={styles.infoText}>{user.mobile_no}</Text>
 					<Text style={styles.infoText}>{user.postcode ?? 'Postcode not available'}</Text>
-					{/* {!!ipAddress && <Text style={[styles.infoText, { opacity: 0.7 }]}>IP: {ipAddress}</Text>} */}
 				</View>
 
 				<View style={styles.buttonGrid}>
@@ -179,14 +262,73 @@ export default function ProfileScreen() {
 								disabled={!canDelete || deleteLoading}
 								activeOpacity={0.8}
 							>
-								<Text style={styles.deleteBtnText}>{deleteLoading ? 'DELETING...' : 'DELETE'}</Text>
+								<Text style={styles.deleteBtnText}>{deleteLoading ? 'SENDING OTP...' : 'DELETE'}</Text>
 							</TouchableOpacity>
 						</View>
 					</View>
 				</View>
 			</Modal>
 
-			{/* Result Dialog */}
+			{/* OTP Popup – like your screenshot */}
+			<Modal
+				visible={showOtpModal}
+				transparent
+				animationType="fade"
+				onRequestClose={() => setShowOtpModal(false)}
+			>
+				<View style={styles.modalOverlay}>
+					<View style={styles.modalContentPolished}>
+						<Text style={[styles.modalTitlePolished, { color: Colors.text, marginBottom: 4 }]}>
+							Enter the 4-digit OTP sent to your email
+						</Text>
+						<Text style={{ color: Colors.danger, marginBottom: 12, fontWeight: '600' }}>
+							Resend available in {formatTime(otpSecondsLeft)}
+						</Text>
+
+						<TextInput
+							style={styles.deleteInput}
+							placeholder="4-digit OTP"
+							placeholderTextColor="#9AA0A6"
+							keyboardType="number-pad"
+							maxLength={6}
+							value={otpCode}
+							onChangeText={setOtpCode}
+							autoCorrect={false}
+						/>
+
+						<View style={styles.modalBtnRowPolished}>
+							<TouchableOpacity
+								style={[styles.modalBtn, styles.cancelBtn]}
+								onPress={() => {
+									setShowOtpModal(false);
+									setOtpCode('');
+								}}
+								disabled={otpLoading}
+								activeOpacity={0.8}
+							>
+								<Text style={styles.cancelBtnText}>CANCEL</Text>
+							</TouchableOpacity>
+
+							<TouchableOpacity
+								style={[
+									styles.modalBtn,
+									styles.verifyBtn,
+									(!canVerifyOtp || otpLoading) && { opacity: 0.6 },
+								]}
+								onPress={handleVerifyOtp}
+								disabled={!canVerifyOtp}
+								activeOpacity={0.8}
+							>
+								<Text style={styles.verifyBtnText}>
+									{otpLoading ? 'VERIFYING...' : 'VERIFY OTP'}
+								</Text>
+							</TouchableOpacity>
+						</View>
+					</View>
+				</View>
+			</Modal>
+
+			{/* Final Result Dialog – only after verifying OTP */}
 			<Modal visible={dialog.visible} transparent animationType="fade" onRequestClose={handleDialogOk}>
 				<View style={styles.modalOverlay}>
 					<View style={styles.modalContentPolished}>
@@ -273,4 +415,8 @@ const styles = StyleSheet.create({
 	cancelBtnText: { color: Colors.danger, fontWeight: 'bold', fontSize: 16, letterSpacing: 0.2 },
 	deleteBtn: { backgroundColor: Colors.danger },
 	deleteBtnText: { color: Colors.white, fontWeight: 'bold', fontSize: 16, letterSpacing: 0.2 },
+
+	// OTP verify button styling (red like screenshot)
+	verifyBtn: { backgroundColor: Colors.primary },
+	verifyBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16, letterSpacing: 0.2 },
 });
