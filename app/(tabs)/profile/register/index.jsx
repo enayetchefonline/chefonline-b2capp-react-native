@@ -19,19 +19,50 @@ import { userRegisterApi } from './../../../../lib/api';
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ukMobileRegex = /^07\d{9}$/;
 
+// Only letters + apostrophe + hyphen, 1–50 chars
+const firstNameRegex = /^[a-zA-Z'-]{1,50}$/;
+const lastNameRegex = /^[a-zA-Z'-]{1,50}$/;
+
 function validateForm(form, skipPolicy = false) {
 	const errors = {};
-	if (!form.firstName) errors.firstName = 'First name is required';
-	if (!form.lastName) errors.lastName = 'Last name is required';
-	if (!form.email) errors.email = 'Email is required';
-	else if (!emailRegex.test(form.email)) errors.email = 'Invalid email format';
-	if (!form.mobile) errors.mobile = 'Mobile number is required';
-	else if (!ukMobileRegex.test(form.mobile))
+	const firstNameTrimmed = (form.firstName || '').trim();
+	const lastNameTrimmed = (form.lastName || '').trim();
+	const emailTrimmed = (form.email || '').trim();
+	const mobileTrimmed = (form.mobile || '').trim();
+
+	// First name
+	if (!firstNameTrimmed) {
+		errors.firstName = 'First name is required';
+	} else if (!firstNameRegex.test(firstNameTrimmed)) {
+		errors.firstName = "First name can only contain letters, ' and - (no spaces or symbols).";
+	}
+
+	// Last name
+	if (!lastNameTrimmed) {
+		errors.lastName = 'Last name is required';
+	} else if (!lastNameRegex.test(lastNameTrimmed)) {
+		errors.lastName = "Last name can only contain letters, ' and - (no spaces or symbols).";
+	}
+
+	// Email
+	if (!emailTrimmed) errors.email = 'Email is required';
+	else if (!emailRegex.test(emailTrimmed)) errors.email = 'Invalid email format';
+
+	// Mobile
+	if (!mobileTrimmed) errors.mobile = 'Mobile number is required';
+	else if (!ukMobileRegex.test(mobileTrimmed)) {
 		errors.mobile = 'Enter a valid UK mobile number (11 digits, starts with 07)';
+	}
+
+	// Password
 	if (!form.password) errors.password = 'Password is required';
 	if (!form.confirmPassword) errors.confirmPassword = 'Confirm password is required';
 	else if (form.password !== form.confirmPassword) errors.confirmPassword = 'Passwords do not match';
-	if (!skipPolicy && !form.agreePolicy) errors.agreePolicy = 'You must agree to the terms and policies';
+
+	// Policy
+	if (!skipPolicy && !form.agreePolicy)
+		errors.agreePolicy = 'You must agree to the terms and policies';
+
 	return errors;
 }
 
@@ -59,21 +90,30 @@ export default function RegisterScreen() {
 	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
 	const handleChange = (key, value) => {
-		setForm((prev) => ({...prev, [key]: value}));
-		setFieldErrors((prev) => ({...prev, [key]: undefined}));
+		// Optional: trim only on submit, but keep raw while typing
+		setForm((prev) => ({ ...prev, [key]: value }));
+		setFieldErrors((prev) => ({ ...prev, [key]: undefined }));
 	};
 
-	const isFormValid = useMemo(() => {
-		return (
-			form.firstName &&
-			form.lastName &&
-			form.email &&
-			form.mobile &&
-			form.password &&
-			form.confirmPassword &&
-			form.agreePolicy
-		);
-	}, [form]);
+	// Disable button unless everything *looks* valid
+const isFormValid = useMemo(() => {
+	const firstNameTrimmed = (form.firstName || '').trim();
+	const lastNameTrimmed = (form.lastName || '').trim();
+	const emailTrimmed = (form.email || '').trim();
+	const mobileTrimmed = (form.mobile || '').trim();
+
+	// Only check REQUIRED fields are filled
+	if (!firstNameTrimmed) return false;
+	if (!lastNameTrimmed) return false;
+	if (!emailTrimmed) return false;
+	if (!mobileTrimmed) return false;
+	if (!form.password) return false;
+	if (!form.confirmPassword) return false;
+	if (!form.agreePolicy) return false;
+
+	return true; // enable button
+}, [form]);
+
 
 	const handleSubmit = async () => {
 		const errors = validateForm(form, false);
@@ -87,11 +127,11 @@ export default function RegisterScreen() {
 		setLoading(true);
 
 		const payload = {
-			first_name: form.firstName,
-			last_name: form.lastName,
-			email: form.email,
-			mobile_no: form.mobile,
-			telephone_no: form.mobile,
+			first_name: form.firstName.trim(),
+			last_name: form.lastName.trim(),
+			email: form.email.trim(),
+			mobile_no: form.mobile.trim(),
+			telephone_no: form.mobile.trim(),
 			postcode: '',
 			address1: '',
 			address2: '',
@@ -106,12 +146,10 @@ export default function RegisterScreen() {
 			want_text_message: form.smsConsent,
 		};
 
-		// console.log("payload........", payload)
-
 		try {
 			const response = await userRegisterApi(payload);
 
-			console.log("resgister response", response)
+			console.log('register response', response);
 
 			if (response.status === 'Success') {
 				setPopupTitle('Success');
@@ -133,7 +171,7 @@ export default function RegisterScreen() {
 		<ScrollView style={styles.container} contentContainerStyle={styles.scrollContainer}>
 			{/* First/Last Name */}
 			<View style={styles.row}>
-				<View style={{flex: 1, marginRight: 8}}>
+				<View style={{ flex: 1, marginRight: 8 }}>
 					<Text style={styles.label}>
 						First Name <Text style={styles.required}>*</Text>
 					</Text>
@@ -144,9 +182,11 @@ export default function RegisterScreen() {
 						value={form.firstName}
 						onChangeText={(text) => handleChange('firstName', text)}
 					/>
-					{fieldErrors.firstName && <Text style={styles.errorText}>{fieldErrors.firstName}</Text>}
+					{fieldErrors.firstName && (
+						<Text style={styles.errorText}>{fieldErrors.firstName}</Text>
+					)}
 				</View>
-				<View style={{flex: 1, marginLeft: 8}}>
+				<View style={{ flex: 1, marginLeft: 8 }}>
 					<Text style={styles.label}>
 						Last Name <Text style={styles.required}>*</Text>
 					</Text>
@@ -157,7 +197,9 @@ export default function RegisterScreen() {
 						value={form.lastName}
 						onChangeText={(text) => handleChange('lastName', text)}
 					/>
-					{fieldErrors.lastName && <Text style={styles.errorText}>{fieldErrors.lastName}</Text>}
+					{fieldErrors.lastName && (
+						<Text style={styles.errorText}>{fieldErrors.lastName}</Text>
+					)}
 				</View>
 			</View>
 
@@ -192,52 +234,71 @@ export default function RegisterScreen() {
 			{fieldErrors.mobile && <Text style={styles.errorText}>{fieldErrors.mobile}</Text>}
 
 			{/* Password + Confirm */}
-			<View style={styles.row}>
-				<View style={{flex: 1, marginRight: 8}}>
-					<Text style={styles.label}>
-						Password <Text style={styles.required}>*</Text>
-					</Text>
-					<View style={styles.inputContainer}>
-						<TextInput
-							style={styles.passwordInput}
-							placeholder="Password"
-							placeholderTextColor={Colors.placeholder}
-							secureTextEntry={!showPassword}
-							value={form.password}
-							onChangeText={(text) => handleChange('password', text)}
+			<View style={{ flex: 1 }}>
+				<Text style={styles.label}>
+					Password <Text style={styles.required}>*</Text>
+				</Text>
+				<View style={styles.inputContainer}>
+					<TextInput
+						style={styles.passwordInput}
+						placeholder="Password"
+						placeholderTextColor={Colors.placeholder}
+						secureTextEntry={!showPassword}
+						value={form.password}
+						onChangeText={(text) => handleChange('password', text)}
+					/>
+					<TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+						<Ionicons
+							name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+							size={22}
+							color="#888"
 						/>
-						<TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-							<Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={22} color="#888" />
-						</TouchableOpacity>
-					</View>
-					{fieldErrors.password && <Text style={styles.errorText}>{fieldErrors.password}</Text>}
+					</TouchableOpacity>
 				</View>
+				{fieldErrors.password && (
+					<Text style={styles.errorText}>{fieldErrors.password}</Text>
+				)}
+			</View>
 
-				<View style={{flex: 1, marginLeft: 8}}>
-					<Text style={styles.label}>
-						Confirm Password <Text style={styles.required}>*</Text>
-					</Text>
-					<View style={styles.inputContainer}>
-						<TextInput
-							style={styles.passwordInput}
-							placeholder="Confirm Password"
-							placeholderTextColor={Colors.placeholder}
-							secureTextEntry={!showConfirmPassword}
-							value={form.confirmPassword}
-							onChangeText={(text) => handleChange('confirmPassword', text)}
+			<View style={{ flex: 1 }}>
+				<Text style={styles.label}>
+					Confirm Password <Text style={styles.required}>*</Text>
+				</Text>
+				<View style={styles.inputContainer}>
+					<TextInput
+						style={styles.passwordInput}
+						placeholder="Confirm Password"
+						placeholderTextColor={Colors.placeholder}
+						secureTextEntry={!showConfirmPassword}
+						value={form.confirmPassword}
+						onChangeText={(text) => handleChange('confirmPassword', text)}
+					/>
+					<TouchableOpacity
+						onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+					>
+						<Ionicons
+							name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+							size={22}
+							color="#888"
 						/>
-						<TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
-							<Ionicons name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} size={22} color="#888" />
-						</TouchableOpacity>
-					</View>
-					{fieldErrors.confirmPassword && <Text style={styles.errorText}>{fieldErrors.confirmPassword}</Text>}
+					</TouchableOpacity>
 				</View>
+				{fieldErrors.confirmPassword && (
+					<Text style={styles.errorText}>{fieldErrors.confirmPassword}</Text>
+				)}
 			</View>
 
 			{/* Policy Checkbox */}
 			<View style={styles.checkboxContainer}>
-				<TouchableOpacity onPress={() => handleChange('agreePolicy', !form.agreePolicy)}>
-					<View style={[styles.checkbox, form.agreePolicy && styles.checkboxChecked]} />
+				<TouchableOpacity
+					onPress={() => handleChange('agreePolicy', !form.agreePolicy)}
+				>
+					<View
+						style={[
+							styles.checkbox,
+							form.agreePolicy && styles.checkboxChecked,
+						]}
+					/>
 				</TouchableOpacity>
 				<Text style={styles.policyText}>
 					I Agree to the{' '}
@@ -246,7 +307,11 @@ export default function RegisterScreen() {
 						onPress={() =>
 							router.push({
 								pathname: '/profile/register/detail',
-								params: {settingsId: 6, settingsName: 'Terms & Conditions', from: 'register'},
+								params: {
+									settingsId: 6,
+									settingsName: 'Terms & Conditions',
+									from: 'register',
+								},
 							})
 						}
 					>
@@ -258,7 +323,11 @@ export default function RegisterScreen() {
 						onPress={() =>
 							router.push({
 								pathname: '/profile/register/detail',
-								params: {settingsId: 7, settingsName: 'Privacy Policy', from: 'register'},
+								params: {
+									settingsId: 7,
+									settingsName: 'Privacy Policy',
+									from: 'register',
+								},
 							})
 						}
 					>
@@ -270,7 +339,11 @@ export default function RegisterScreen() {
 						onPress={() =>
 							router.push({
 								pathname: '/profile/register/detail',
-								params: {settingsId: 8, settingsName: 'Cookies Policy', from: 'register'},
+								params: {
+									settingsId: 8,
+									settingsName: 'Cookies Policy',
+									from: 'register',
+								},
 							})
 						}
 					>
@@ -278,12 +351,15 @@ export default function RegisterScreen() {
 					</Text>{' '}
 				</Text>
 			</View>
-			{fieldErrors.agreePolicy && <Text style={styles.errorText}>{fieldErrors.agreePolicy}</Text>}
+			{fieldErrors.agreePolicy && (
+				<Text style={styles.errorText}>{fieldErrors.agreePolicy}</Text>
+			)}
 
 			{/* Email Consent */}
-			<View style={styles.radioGroup}>
+			<View className="radioGroup" style={styles.radioGroup}>
 				<Text style={styles.radioLabel}>
-					I wish to receive emails/newsletters on offers, discounts, promotions and prize draw.
+					I wish to receive emails/newsletters on offers, discounts, promotions
+					and prize draw.
 				</Text>
 				<View style={styles.radioRow}>
 					<View style={styles.radioButtonWrapper}>
@@ -313,7 +389,8 @@ export default function RegisterScreen() {
 			{/* SMS Consent */}
 			<View style={styles.radioGroup}>
 				<Text style={styles.radioLabel}>
-					I wish to receive text messages on offers, discounts, promotions and prize draw.
+					I wish to receive text messages on offers, discounts, promotions and
+					prize draw.
 				</Text>
 				<View style={styles.radioRow}>
 					<View style={styles.radioButtonWrapper}>
@@ -342,11 +419,18 @@ export default function RegisterScreen() {
 
 			{/* Submit Button */}
 			<TouchableOpacity
-				style={[styles.submitBtn, {backgroundColor: isFormValid ? Colors.primary : '#ddd'}]}
+				style={[
+					styles.submitBtn,
+					{ backgroundColor: isFormValid ? Colors.primary : '#ddd' },
+				]}
 				disabled={!isFormValid || loading}
 				onPress={handleSubmit}
 			>
-				{loading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.submitText}>REGISTER</Text>}
+				{loading ? (
+					<ActivityIndicator size="small" color="#fff" />
+				) : (
+					<Text style={styles.submitText}>REGISTER</Text>
+				)}
 			</TouchableOpacity>
 
 			<CustomPopUp
