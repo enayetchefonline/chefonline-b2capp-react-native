@@ -98,10 +98,6 @@ export default function CheckoutScreen() {
 	// IP address via reusable hook
 	const { ipAddress } = useIpAddress();
 
-	console.log("ipAddress", ipAddress)
-	console.log("payment method", paymentMethod)
-	console.log("availablePaymentMethods", availablePaymentMethods)
-
 	const isRestaurantOpenNow = (schedule, orderMode) => {
 		if (!Array.isArray(schedule) || schedule.length === 0) {
 			console.log("❌ Schedule is empty");
