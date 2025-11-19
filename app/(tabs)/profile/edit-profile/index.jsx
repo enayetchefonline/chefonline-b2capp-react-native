@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-	Keyboard,
-	KeyboardAvoidingView,
-	Modal,
-	Platform,
-	Pressable,
-	ScrollView,
-	StyleSheet,
-	Text,
-	TextInput,
-	TouchableOpacity,
-	TouchableWithoutFeedback,
-	View,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { useDispatch, useSelector } from 'react-redux';
@@ -21,12 +21,20 @@ import Colors from '../../../../constants/color';
 import { userEditProfileApi } from '../../../../lib/api';
 import { setUser } from '../../../../store/slices/authSlice';
 
+// Title Options
 const TITLE_OPTIONS = [
   { label: 'Mr', value: 'Mr' },
   { label: 'Mrs', value: 'Mrs' },
   { label: 'Ms', value: 'Ms' },
   { label: 'Dr', value: 'Dr' },
 ];
+
+// ⭐ Reusable Label Component
+const Label = ({ text, required = false }) => (
+  <Text style={styles.label}>
+    {text} {required && <Text style={{ color: 'red' }}>*</Text>}
+  </Text>
+);
 
 export default function EditProfileScreen() {
   const [title, setTitle] = useState('');
@@ -39,13 +47,13 @@ export default function EditProfileScreen() {
   const [address1, setAddress1] = useState('');
   const [address2, setAddress2] = useState('');
   const [town, setTown] = useState('');
-  const [city, setCity] = useState('');
   const [country, setCountry] = useState('');
+  const [postcode, setPostcode] = useState('');
   const [dob, setDob] = useState('');
   const [anniversary, setAnniversary] = useState('');
+
   const [dobPickerVisible, setDobPickerVisible] = useState(false);
   const [doaPickerVisible, setDoaPickerVisible] = useState(false);
-  const [postcode, setPostcode] = useState('');
 
   const [saving, setSaving] = useState(false);
   const [popupVisible, setPopupVisible] = useState(false);
@@ -57,7 +65,7 @@ export default function EditProfileScreen() {
   const authUser = useSelector((state) => state.auth.user);
   const userId = authUser?.userid;
 
-  // Dates
+  // Date limits
   const todayStart = useMemo(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -76,7 +84,6 @@ export default function EditProfileScreen() {
       setAddress1(authUser.address1 || '');
       setAddress2(authUser.address2 || '');
       setTown(authUser.town || '');
-      setCity(authUser.city || '');
       setCountry(authUser.country || '');
       setDob(authUser.dob_date || authUser.date_of_birth || '');
       setAnniversary(authUser.doa || authUser.date_of_anniversery || '');
@@ -84,39 +91,39 @@ export default function EditProfileScreen() {
     }
   }, [authUser]);
 
-  // ========= Validators =========
+  // ===== VALIDATION METHODS =====
+
   const isValidEmail = (val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((val || '').trim());
-  const isValidUKMobile = (val) => /^07\d{9}$/.test((val || '').trim()); // keep same rule you used elsewhere
+
+  // ⭐ Strict UK Mobile: 07xxxxxxxxx
+  const isValidUKMobile = (val) => /^07\d{9}$/.test((val || '').trim());
+
   const isValidTitle = (val) => {
     if (!val) return true; // optional
     return TITLE_OPTIONS.some((t) => t.value === val);
   };
+
   const sanitizeName = (t) => t.replace(/[^A-Za-z' -]/g, '');
-  const isName = (val) => {
-    const s = (val || '').trim();
-    if (!s) return false;
-    if (/[@\d]/.test(s)) return false;
-    return /^[A-Za-z' -]+$/.test(s);
-  };
+  const isName = (val) => /^[A-Za-z' -]+$/.test((val || '').trim());
+
   const sanitizeTownCountry = (t) => t.replace(/[^A-Za-z -]/g, '');
   const isTownCountry = (val) => /^[A-Za-z -]+$/.test((val || '').trim());
+
   const isAddress = (val) => !!(val || '').trim();
 
-  // Lenient UK postcode (uppercase & allow space)
   const normalizePostcode = (pc) => (pc || '').toUpperCase().replace(/\s+/g, ' ').trim();
   const isUKPostcode = (pc) =>
     /^(GIR 0AA|[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2})$/i.test((pc || '').toUpperCase().trim());
 
-  // Telephone: optional; digits, spaces, + - ( ) allowed; at least 6 chars when present
   const sanitizeTelephone = (t) => t.replace(/[^0-9+\-() ]/g, '');
   const isTelephone = (val) => {
-    if (!(val || '').trim()) return true; // optional
-    const s = (val || '').trim();
+    if (!val || !val.trim()) return true; // optional
+    const s = val.trim();
     if (!/^[0-9+\-() ]+$/.test(s)) return false;
     return s.replace(/[^0-9]/g, '').length >= 6;
   };
 
-  // DOB/DOA: optional; must not be future
+  // DOB/DOA: optional but must not be future if present
   const isPastOrToday = (iso) => {
     if (!iso) return true; // optional
     const d = new Date(iso);
@@ -124,6 +131,7 @@ export default function EditProfileScreen() {
     return d <= todayStart;
   };
 
+  // ⭐ Final Form Validator
   const isFormValid = () =>
     isValidTitle(title) &&
     isName(firstName) &&
@@ -132,7 +140,7 @@ export default function EditProfileScreen() {
     isValidUKMobile(phone) &&
     isAddress(address1) &&
     isUKPostcode(postcode) &&
-    isTownCountry(town || city) &&
+    isTownCountry(town) &&
     isTownCountry(country) &&
     isTelephone(telephone) &&
     isPastOrToday(dob) &&
@@ -146,7 +154,7 @@ export default function EditProfileScreen() {
     try {
       const payload = {
         userid: userId,
-        title: title,
+        title,
         first_name: firstName.trim(),
         last_name: lastName.trim(),
         email: email.trim(),
@@ -154,7 +162,7 @@ export default function EditProfileScreen() {
         telephone_no: telephone.trim(),
         address1: address1.trim(),
         address2: (address2 || '').trim(),
-        city: (city || town).trim(),
+        city: town.trim(),
         country: country.trim(),
         postcode: normalizePostcode(postcode),
         dob_date: dob,
@@ -165,6 +173,7 @@ export default function EditProfileScreen() {
 
       if (response?.status === 'ok' || response?.status === 'Success' || response?.success) {
         dispatch(setUser({ user: response?.UserDetails }));
+
         setPopupTitle('Profile Updated');
         setPopupMessage(response?.msg || 'Your changes have been saved successfully.');
         setPopupVisible(true);
@@ -173,8 +182,7 @@ export default function EditProfileScreen() {
         setPopupMessage(response?.msg || 'Something went wrong!');
         setPopupVisible(true);
       }
-    } catch (_error) {
-      // fall back alert if popup fails to render
+    } catch {
       setPopupTitle('Update Failed');
       setPopupMessage('Failed to update profile. Please try again.');
       setPopupVisible(true);
@@ -183,7 +191,7 @@ export default function EditProfileScreen() {
     }
   };
 
-  // Helper to attach error style
+  // Highlight invalid fields
   const inputStyle = (valid) => [styles.input, showErrors && !valid && styles.inputError];
 
   return (
@@ -197,30 +205,25 @@ export default function EditProfileScreen() {
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
               <View style={styles.formContainer}>
-                {/* Title Bottom Sheet Selector */}
+
+                {/* Title */}
                 <View style={styles.field}>
-                  <Text style={styles.label}>Title</Text>
+                  <Label text="Title" />
                   <TouchableOpacity
                     activeOpacity={0.7}
-                    style={[
-                      styles.sheetInput,
-                      showErrors && !isValidTitle(title) && styles.inputError,
-                    ]}
+                    style={[styles.input, styles.sheetInput]}
                     onPress={() => setShowTitleSheet(true)}
                   >
                     <Text style={{ color: title ? Colors.text : '#aaa' }}>
                       {TITLE_OPTIONS.find((opt) => opt.value === title)?.label || 'Select Title'}
                     </Text>
                   </TouchableOpacity>
-                  {showErrors && !isValidTitle(title) && (
-                    <Text style={styles.errorText}>Please select a valid title.</Text>
-                  )}
                 </View>
 
-                {/* First & Last Name */}
+                {/* Names */}
                 <View style={styles.row}>
                   <View style={[styles.field, styles.half]}>
-                    <Text style={styles.label}>First Name</Text>
+                    <Label text="First Name" required />
                     <TextInput
                       style={inputStyle(isName(firstName))}
                       placeholder="First name"
@@ -232,8 +235,9 @@ export default function EditProfileScreen() {
                       <Text style={styles.errorText}>Only letters, spaces, - and ' allowed.</Text>
                     )}
                   </View>
+
                   <View style={[styles.field, styles.half]}>
-                    <Text style={styles.label}>Last Name</Text>
+                    <Label text="Last Name" required />
                     <TextInput
                       style={inputStyle(isName(lastName))}
                       placeholder="Last name"
@@ -247,84 +251,59 @@ export default function EditProfileScreen() {
                   </View>
                 </View>
 
-                {/* Email (disabled) */}
+                {/* Email */}
                 <View style={styles.field}>
-                  <Text style={styles.label}>Email</Text>
+                  <Label text="Email" required />
                   <TextInput
-                    style={[
-                      styles.input,
-                      styles.inputDisabled,
-                      styles.inputDisabledText,
-                      showErrors && !isValidEmail(email) && styles.inputError,
-                    ]}
-                    placeholder="you@example.com"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
+                    style={[styles.input, styles.inputDisabled]}
                     value={email}
-                    onChangeText={setEmail}
                     editable={false}
-                    placeholderTextColor={Colors.disabledText || '#9CA3AF'}
-                    accessibilityState={{ disabled: true }}
                   />
-                  {showErrors && !isValidEmail(email) && (
-                    <Text style={styles.errorText}>Invalid email format in your profile.</Text>
-                  )}
                 </View>
 
-                {/* Phone & Telephone */}
+                {/* Phone + Telephone */}
                 <View style={styles.row}>
                   <View style={[styles.field, styles.half]}>
-                    <Text style={styles.label}>Phone</Text>
+                    <Label text="Phone" required />
                     <TextInput
-                      style={[
-                        styles.input,
-                        styles.inputDisabled,
-                        styles.inputDisabledText,
-                        showErrors && !isValidUKMobile(phone) && styles.inputError,
-                      ]}
-                      placeholder="Mobile number"
-                      keyboardType="phone-pad"
+                      style={[styles.input, styles.inputDisabled]}
                       value={phone}
-                      onChangeText={setPhone}
                       editable={false}
-                      placeholderTextColor={Colors.disabledText || '#9CA3AF'}
-                      accessibilityState={{ disabled: true }}
                     />
                     {showErrors && !isValidUKMobile(phone) && (
-                      <Text style={styles.errorText}>Invalid UK mobile number in your profile.</Text>
+                      <Text style={styles.errorText}>Phone must be UK format 07XXXXXXXXX</Text>
                     )}
                   </View>
+
                   <View style={[styles.field, styles.half]}>
-                    <Text style={styles.label}>Telephone</Text>
+                    <Label text="Telephone" />
                     <TextInput
                       style={inputStyle(isTelephone(telephone))}
+                      value={telephone}
                       placeholder="Landline"
                       keyboardType="phone-pad"
-                      value={telephone}
                       onChangeText={(t) => setTelephone(sanitizeTelephone(t))}
                       placeholderTextColor={Colors.placeholder}
                     />
                     {showErrors && !isTelephone(telephone) && (
-                      <Text style={styles.errorText}>Use digits, spaces, + - ( ); at least 6 digits.</Text>
+                      <Text style={styles.errorText}>
+                        Use digits, spaces, + - ( ); at least 6 digits.
+                      </Text>
                     )}
                   </View>
                 </View>
 
-                {/* DOB Picker */}
+                {/* DOB */}
                 <View style={styles.field}>
-                  <Text style={styles.label}>Date of Birth (DOB)</Text>
+                  <Label text="Date of Birth (DOB)" />
                   <Pressable onPress={() => setDobPickerVisible(true)}>
                     <TextInput
-                      style={[
-                        styles.input,
-                        styles.inputDisabled, // looks disabled but pressable area opens picker
-                        !isPastOrToday(dob) && showErrors && styles.inputError,
-                      ]}
+                      style={inputStyle(isPastOrToday(dob))}
                       placeholder="YYYY-MM-DD"
                       value={dob}
-                      editable={false}
-                      pointerEvents="none"
-                      placeholderTextColor={Colors.disabledText || '#9CA3AF'}
+                      editable={false}      // value comes from picker
+                      pointerEvents="none"  // allow Pressable to handle press
+                      placeholderTextColor={Colors.placeholder}
                     />
                   </Pressable>
                   {showErrors && !isPastOrToday(dob) && (
@@ -332,21 +311,17 @@ export default function EditProfileScreen() {
                   )}
                 </View>
 
-                {/* Anniversary Picker */}
+                {/* Anniversary */}
                 <View style={styles.field}>
-                  <Text style={styles.label}>Anniversary Date (DOA)</Text>
+                  <Label text="Anniversary Date (DOA)" />
                   <Pressable onPress={() => setDoaPickerVisible(true)}>
                     <TextInput
-                      style={[
-                        styles.input,
-                        styles.inputDisabled,
-                        !isPastOrToday(anniversary) && showErrors && styles.inputError,
-                      ]}
+                      style={inputStyle(isPastOrToday(anniversary))}
                       placeholder="YYYY-MM-DD"
                       value={anniversary}
                       editable={false}
                       pointerEvents="none"
-                      placeholderTextColor={Colors.disabledText || '#9CA3AF'}
+                      placeholderTextColor={Colors.placeholder}
                     />
                   </Pressable>
                   {showErrors && !isPastOrToday(anniversary) && (
@@ -354,40 +329,42 @@ export default function EditProfileScreen() {
                   )}
                 </View>
 
-                {/* Address Lines */}
+                {/* Address 1 */}
                 <View style={styles.field}>
-                  <Text style={styles.label}>Address Line 1</Text>
+                  <Label text="Address Line 1" required />
                   <TextInput
                     style={inputStyle(isAddress(address1))}
-                    placeholder="Street address, P.O. box, etc."
                     value={address1}
                     onChangeText={setAddress1}
+                    placeholder="Street address, P.O. box, etc."
                     placeholderTextColor={Colors.placeholder}
                   />
                   {showErrors && !isAddress(address1) && (
                     <Text style={styles.errorText}>Address line 1 is required.</Text>
                   )}
                 </View>
+
+                {/* Address 2 */}
                 <View style={styles.field}>
-                  <Text style={styles.label}>Address Line 2</Text>
+                  <Label text="Address Line 2" />
                   <TextInput
                     style={styles.input}
-                    placeholder="Apartment, suite, unit, building, floor, etc."
                     value={address2}
                     onChangeText={setAddress2}
+                    placeholder="Apartment, suite, unit, building, floor, etc."
                     placeholderTextColor={Colors.placeholder}
                   />
                 </View>
 
-                {/* Town / City / Country */}
+                {/* Town / Country / Postcode */}
                 <View style={styles.row}>
                   <View style={[styles.field, styles.third]}>
-                    <Text style={styles.label}>Postcode</Text>
+                    <Label text="Postcode" required />
                     <TextInput
                       style={inputStyle(isUKPostcode(postcode))}
-                      placeholder="Enter postcode"
                       value={postcode}
                       onChangeText={(t) => setPostcode(t.toUpperCase())}
+                      placeholder="SW1A 1AA"
                       autoCapitalize="characters"
                       placeholderTextColor={Colors.placeholder}
                     />
@@ -395,47 +372,49 @@ export default function EditProfileScreen() {
                       <Text style={styles.errorText}>Enter a valid UK postcode (e.g., SW1A 1AA).</Text>
                     )}
                   </View>
+
                   <View style={[styles.field, styles.third]}>
-                    <Text style={styles.label}>Town</Text>
+                    <Label text="Town" required />
                     <TextInput
-                      style={inputStyle(isTownCountry(town || city))}
-                      placeholder="Town"
+                      style={inputStyle(isTownCountry(town))}
                       value={town}
                       onChangeText={(t) => setTown(sanitizeTownCountry(t))}
+                      placeholder="Town"
                       placeholderTextColor={Colors.placeholder}
                     />
-                    {showErrors && !isTownCountry(town || city) && (
+                    {showErrors && !isTownCountry(town) && (
                       <Text style={styles.errorText}>Town is required (letters and spaces only).</Text>
                     )}
                   </View>
+
                   <View style={[styles.field, styles.third]}>
-                    <Text style={styles.label}>Country</Text>
+                    <Label text="Country" required />
                     <TextInput
                       style={inputStyle(isTownCountry(country))}
-                      placeholder="Country"
                       value={country}
                       onChangeText={(t) => setCountry(sanitizeTownCountry(t))}
+                      placeholder="Country"
                       placeholderTextColor={Colors.placeholder}
                     />
                     {showErrors && !isTownCountry(country) && (
-                      <Text style={styles.errorText}>Country is required (letters and spaces only).</Text>
+                      <Text style={styles.errorText}>
+                        Country is required (letters and spaces only).
+                      </Text>
                     )}
                   </View>
                 </View>
 
-                {/* Save Button */}
                 <View style={styles.buttonContainer}>
                   <CustomButton
                     title="SAVE CHANGES"
                     iconName="save-outline"
                     loading={saving}
-                    loadingText="Saving…"
                     onPress={handleSave}
-                    style={!isFormValid() && showErrors ? { opacity: 0.75 } : {}}
+                    loadingText="Saving…"
                   />
                   {!isFormValid() && showErrors && (
                     <Text style={{ color: '#D32F2F', marginTop: 10, textAlign: 'center' }}>
-                      Please fix the errors highlighted above.
+                      Please fix the highlighted fields.
                     </Text>
                   )}
                 </View>
@@ -444,38 +423,39 @@ export default function EditProfileScreen() {
           </TouchableWithoutFeedback>
         </KeyboardAvoidingView>
 
-        {/* DOB */}
+        {/* DOB Picker */}
         <DateTimePickerModal
           isVisible={dobPickerVisible}
           mode="date"
           minimumDate={oldestDate}
           maximumDate={todayStart}
           onConfirm={(date) => {
-            const formatted = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+            const f = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
               date.getDate()
             ).padStart(2, '0')}`;
-            setDob(formatted);
+            setDob(f);
             setDobPickerVisible(false);
           }}
           onCancel={() => setDobPickerVisible(false)}
         />
 
-        {/* DOA */}
+        {/* DOA Picker */}
         <DateTimePickerModal
           isVisible={doaPickerVisible}
           mode="date"
           minimumDate={oldestDate}
           maximumDate={todayStart}
           onConfirm={(date) => {
-            const formatted = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+            const f = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
               date.getDate()
             ).padStart(2, '0')}`;
-            setAnniversary(formatted);
+            setAnniversary(f);
             setDoaPickerVisible(false);
           }}
           onCancel={() => setDoaPickerVisible(false)}
         />
 
+        {/* Popup */}
         <CustomPopUp
           visible={popupVisible}
           title={popupTitle}
@@ -484,19 +464,23 @@ export default function EditProfileScreen() {
           showCancel={false}
           maskClosable={false}
           onConfirm={() => setPopupVisible(false)}
-          onCancel={() => setPopupVisible(false)}
         />
 
-        {/* Title Bottom Sheet Modal */}
+        {/* Title Sheet */}
         <Modal
           visible={showTitleSheet}
           transparent
           animationType="slide"
           onRequestClose={() => setShowTitleSheet(false)}
         >
-          <TouchableOpacity activeOpacity={1} style={styles.sheetBackdrop} onPress={() => setShowTitleSheet(false)}>
+          <TouchableOpacity
+            activeOpacity={1}
+            style={styles.sheetBackdrop}
+            onPress={() => setShowTitleSheet(false)}
+          >
             <TouchableOpacity activeOpacity={1} style={styles.sheetContainer}>
               <Text style={styles.sheetTitle}>Select Title</Text>
+
               {TITLE_OPTIONS.map((opt) => (
                 <TouchableOpacity
                   key={opt.value}
@@ -506,7 +490,12 @@ export default function EditProfileScreen() {
                     setShowTitleSheet(false);
                   }}
                 >
-                  <Text style={[styles.sheetOptionText, opt.value === title && styles.sheetOptionTextSelected]}>
+                  <Text
+                    style={[
+                      styles.sheetOptionText,
+                      opt.value === title && styles.sheetOptionTextSelected,
+                    ]}
+                  >
                     {opt.label}
                   </Text>
                 </TouchableOpacity>
@@ -519,10 +508,10 @@ export default function EditProfileScreen() {
   );
 }
 
+// ===== STYLES =====
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-  },
+  container: { padding: 16 },
+
   formContainer: {
     backgroundColor: Colors.white,
     borderRadius: 8,
@@ -534,53 +523,48 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 10,
   },
-  field: {
-    marginBottom: 16,
-  },
+
+  field: { marginBottom: 16 },
+
   label: {
     marginBottom: 6,
     fontWeight: '600',
     color: Colors.text,
   },
+
   input: {
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 4,
     paddingHorizontal: 10,
     paddingVertical: 8,
+    height: 45,
+    backgroundColor: '#fff',
     color: Colors.text,
-    height: 45,
-    backgroundColor: Colors.white,
   },
-  inputError: {
-    borderColor: '#D32F2F',
+
+  inputError: { borderColor: '#D32F2F' },
+
+  inputDisabled: {
+    backgroundColor: '#F2F4F7',
+    borderColor: '#E5E7EB',
+    color: '#9CA3AF',
   },
-  sheetInput: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 4,
-    paddingHorizontal: 10,
-    height: 45,
-    justifyContent: 'center',
-    backgroundColor: Colors.white,
-  },
+
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  half: {
-    flex: 0.48,
-  },
-  third: {
-    flex: 0.3,
-  },
+
+  half: { flex: 0.48 },
+  third: { flex: 0.32 },
+
   buttonContainer: {
     marginTop: 24,
-    justifyContent: 'center',
     alignItems: 'center',
   },
 
-  // Bottom Sheet Styles
+  // Bottom Sheet
   sheetBackdrop: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -594,36 +578,19 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingHorizontal: 16,
   },
-  sheetTitle: {
-    fontWeight: 'bold',
-    fontSize: 18,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  sheetOption: {
-    paddingVertical: 16,
-    borderBottomColor: '#eee',
-    borderBottomWidth: 1,
-  },
-  sheetOptionSelected: {
-    backgroundColor: '#f5f5f5',
-  },
-  sheetOptionText: {
-    fontSize: 16,
-    color: Colors.text,
-    textAlign: 'center',
-  },
-  sheetOptionTextSelected: {
-    color: Colors.primary,
-    fontWeight: 'bold',
+  sheetTitle: { fontSize: 18, fontWeight: 'bold', textAlign: 'center', marginBottom: 8 },
+  sheetOption: { paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  sheetOptionSelected: { backgroundColor: '#f5f5f5' },
+  sheetOptionText: { textAlign: 'center', fontSize: 16, color: Colors.text },
+  sheetOptionTextSelected: { color: Colors.primary, fontWeight: 'bold' },
+
+  errorText: {
+    color: '#D32F2F',
+    fontSize: 12,
+    marginTop: 4,
   },
 
-  // Disabled visuals
-  inputDisabled: {
-    backgroundColor: Colors.disabledBg || '#F2F4F7',
-    borderColor: Colors.disabledBorder || '#E5E7EB',
-  },
-  inputDisabledText: {
-    color: Colors.disabledText || '#9CA3AF',
+  sheetInput: {
+    justifyContent: 'center',
   },
 });
