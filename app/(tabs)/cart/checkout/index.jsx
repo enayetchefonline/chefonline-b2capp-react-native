@@ -99,6 +99,8 @@ export default function CheckoutScreen() {
 	const { ipAddress } = useIpAddress();
 
 	console.log("ipAddress", ipAddress)
+	console.log("payment method", paymentMethod)
+	console.log("availablePaymentMethods", availablePaymentMethods)
 
 	const isRestaurantOpenNow = (schedule, orderMode) => {
 		if (!Array.isArray(schedule) || schedule.length === 0) {
@@ -710,6 +712,20 @@ export default function CheckoutScreen() {
 		});
 	}
 
+	// Deduplicate payment methods by payment_settings_id + payment_method
+	const uniquePaymentMethods = Array.isArray(availablePaymentMethods)
+		? availablePaymentMethods.reduce((acc, method) => {
+			const exists = acc.some(
+				(m) =>
+					m.payment_settings_id === method.payment_settings_id &&
+					m.payment_method === method.payment_method
+			);
+			if (!exists) acc.push(method);
+			return acc;
+		}, [])
+		: [];
+
+
 	// --- RENDER ---
 	return (
 		<ScrollView contentContainerStyle={styles.scrollContainer} style={styles.container}>
@@ -887,25 +903,37 @@ export default function CheckoutScreen() {
 
 
 			{/* Payment */}
+			{/* Payment */}
 			<View style={styles.paymentCard}>
 				<Text style={styles.sectionTitle}>SELECT PAYMENT OPTION</Text>
 				<View style={styles.paymentRow}>
-					{availablePaymentMethods.map((method, index) => (
-						<TouchableOpacity
-							key={index}
-							style={[styles.paymentBtn, paymentMethod === method.payment_method && styles.selectedBtn]}
-							onPress={() => selectedPaymentMethod(method)}
-						>
-							<Ionicons
-								name={method.payment_method === 'Card' ? 'card-outline' : 'cash-outline'}
-								size={20}
-								color={paymentMethod === method.payment_method ? '#fff' : '#333'}
-							/>
-							<Text style={[styles.paymentText, paymentMethod === method.payment_method && styles.paymentTextSelected]}>
-								{method.payment_method}
-							</Text>
-						</TouchableOpacity>
-					))}
+					{uniquePaymentMethods.map((method, index) => {
+						const isSelected =
+							paymentMethod === method.payment_method &&
+							String(selectedPaymentSettingID) === String(method.payment_settings_id);
+
+						return (
+							<TouchableOpacity
+								key={`${method.payment_method}-${method.payment_settings_id}-${index}`}
+								style={[styles.paymentBtn, isSelected && styles.selectedBtn]}
+								onPress={() => selectedPaymentMethod(method)}
+							>
+								<Ionicons
+									name={method.payment_method === 'Card' ? 'card-outline' : 'cash-outline'}
+									size={20}
+									color={isSelected ? '#fff' : '#333'}
+								/>
+								<Text
+									style={[
+										styles.paymentText,
+										isSelected && styles.paymentTextSelected,
+									]}
+								>
+									{method.payment_method}
+								</Text>
+							</TouchableOpacity>
+						);
+					})}
 				</View>
 			</View>
 
