@@ -92,6 +92,8 @@ export default function CheckoutScreen() {
 
 	const restaurantSchedule = restaurantDetails?.restuarent_schedule?.schedule || [];
 
+	console.log("restaurantSchedule", JSON.stringify(restaurantSchedule, null, 2));
+
 	// Controlled input values
 	const [specialNote, setSpecialNoteText] = useState(storeNote || '');
 	const [voucherCode, setVoucherCodeText] = useState(storeVoucher?.vouchar_code || '');
