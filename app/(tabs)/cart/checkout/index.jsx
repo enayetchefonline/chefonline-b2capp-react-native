@@ -86,6 +86,8 @@ export default function CheckoutScreen() {
 	const restaurantDetails = useSelector((state) => state.restaurantDetail.data);
 	const availablePaymentMethods = useSelector((state) => state.restaurantDetail.payment_options);
 
+	console.log("auth user", authUser)
+
 
 
 	const restaurantSchedule = restaurantDetails?.restuarent_schedule?.schedule || [];
@@ -1017,27 +1019,27 @@ export default function CheckoutScreen() {
 				}}
 			/>
 
-			{authUser?.email === 'test.engineer1@gmail.com' && (
-				<CustomPopUp
-					visible={verificationCodePopupVisible}
-					title="Enter Verification Code"
-					showCancel
-					onCancel={() => setVerificationCodePopupVisible(false)}
-					onConfirm={handleVerificationSubmit}
-					confirmLoading={verificationLoading}
-					disableConfirm={verificationLoading}
-				>
-					<TextInput
-						style={styles.popupInputSingleLine}
-						placeholder="Enter 4-digit code"
-						keyboardType="numeric"
-						value={verificationCode}
-						onChangeText={setVerificationCode}
-						maxLength={6}
-						placeholderTextColor={Colors.placeholder}
-					/>
-				</CustomPopUp>
-			)}
+			{/* order verification order popup */}
+			<CustomPopUp
+				visible={verificationCodePopupVisible}
+				title="Verify it's you"
+				message={`A verification code has been sent to your registered mobile number ${authUser?.mobile_no}. Please enter the code to proceed.`}
+				showCancel
+				onCancel={() => setVerificationCodePopupVisible(false)}
+				onConfirm={handleVerificationSubmit}
+				confirmLoading={verificationLoading}
+				disableConfirm={verificationLoading}
+			>
+				<TextInput
+					style={styles.popupInputSingleLine}
+					placeholder="Enter 4-digit code"
+					keyboardType="numeric"
+					value={verificationCode}
+					onChangeText={setVerificationCode}
+					maxLength={6}
+					placeholderTextColor={Colors.placeholder}
+				/>
+			</CustomPopUp>
 
 			<CustomPopUp
 				visible={donationPopupVisible}
