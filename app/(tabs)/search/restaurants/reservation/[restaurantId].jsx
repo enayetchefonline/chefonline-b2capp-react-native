@@ -1,18 +1,18 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+	Keyboard,
+	KeyboardAvoidingView,
+	Modal,
+	Platform,
+	Pressable,
+	ScrollView,
+	StyleSheet,
+	Text,
+	TextInput,
+	TouchableOpacity,
+	TouchableWithoutFeedback,
+	View,
 } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { useSelector } from 'react-redux';
@@ -79,7 +79,7 @@ export default function ReservationScreen() {
 
 	// guests must be integer >= 1
 	const guestsNum = Number(guests);
-const isValidGuests = Number.isInteger(guestsNum) && guestsNum >= 1;
+	const isValidGuests = Number.isInteger(guestsNum) && guestsNum >= 1;
 
 	const isFormValid = () =>
 		isValidTitle(title) &&
@@ -155,6 +155,8 @@ const isValidGuests = Number.isInteger(guestsNum) && guestsNum >= 1;
 				specialRequest: specialInstructions,
 				ipAddress: ip,
 			};
+
+			console.log("reservation payload", payload)
 
 			const response = await makeReservation(payload);
 
@@ -277,39 +279,37 @@ const isValidGuests = Number.isInteger(guestsNum) && guestsNum >= 1;
 							</View>
 
 							{/* Phone & Telephone */}
-							<View style={styles.row}>
-								<View style={[styles.field, styles.half]}>
-									<Text style={styles.label}>
-										Mobile No <Text style={styles.required}>*</Text>
-									</Text>
-									<TextInput
-										style={styles.input}
-										placeholder="07XXXXXXXXX"
-										keyboardType="phone-pad"
-										value={phone}
-										onChangeText={setPhone}
-										placeholderTextColor={Colors.placeholder}
-										maxLength={11}
-									/>
-									{!phone.trim() && showErrors && (
-										<Text style={styles.errorText}>Mobile No is required</Text>
-									)}
-									{phone.trim() && !isValidUKMobile(phone) && showErrors && (
-										<Text style={styles.errorText}>Enter a valid mobile number</Text>
-									)}
-								</View>
-								<View style={[styles.field, styles.half]}>
-									<Text style={styles.label}>Telephone No</Text>
-									<TextInput
-										style={styles.input}
-										placeholder="Landline"
-										keyboardType="phone-pad"
-										value={telephone}
-										onChangeText={setTelephone}
-										placeholderTextColor={Colors.placeholder}
-									/>
-								</View>
+							<View style={[styles.field, styles.half]}>
+								<Text style={styles.label}>
+									Mobile No <Text style={styles.required}>*</Text>
+								</Text>
+								<TextInput
+									style={styles.input}
+									placeholder="07XXXXXXXXX"
+									keyboardType="phone-pad"
+									value={phone}
+									onChangeText={setPhone}
+									placeholderTextColor={Colors.placeholder}
+									maxLength={11}
+								/>
+								{!phone.trim() && showErrors && (
+									<Text style={styles.errorText}>Mobile No is required</Text>
+								)}
+								{phone.trim() && !isValidUKMobile(phone) && showErrors && (
+									<Text style={styles.errorText}>Enter a valid mobile number</Text>
+								)}
 							</View>
+							{/* <View style={[styles.field, styles.half]}>
+								<Text style={styles.label}>Telephone No</Text>
+								<TextInput
+									style={styles.input}
+									placeholder="Landline"
+									keyboardType="phone-pad"
+									value={telephone}
+									onChangeText={setTelephone}
+									placeholderTextColor={Colors.placeholder}
+								/>
+							</View> */}
 
 							{/* Date */}
 							<View style={styles.field}>

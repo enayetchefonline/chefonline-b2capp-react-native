@@ -8,26 +8,26 @@
 
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		23C6ED8A7D11AF9B349F6C0B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = DD08F0F6B1CC24E40DABC399 /* PrivacyInfo.xcprivacy */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		7F19B42C093B2910D92C94D7 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C582661DCCBB89D49B40826 /* ExpoModulesProvider.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		D52EE4E5D434EF4213B93DDE /* libPods-chefonline.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A7E5E70C3EB2A6B4910A6585 /* libPods-chefonline.a */; };
+		C3758D4D9644B38CAE2F7E09 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 01014645A3F7D185FDC0DA7E /* PrivacyInfo.xcprivacy */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
+		F24C0930E524BC6186C5CAB3 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 748005F70F3983ABAFC91E98 /* ExpoModulesProvider.swift */; };
+		F62FFA5BC3FC997FA243678F /* libPods-chefonline.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 09B0BFF48219D30E52F7D48F /* libPods-chefonline.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		01014645A3F7D185FDC0DA7E /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = chefonline/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		024D949A5EBEE370A00ACEE1 /* Pods-chefonline.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-chefonline.debug.xcconfig"; path = "Target Support Files/Pods-chefonline/Pods-chefonline.debug.xcconfig"; sourceTree = "<group>"; };
+		09B0BFF48219D30E52F7D48F /* libPods-chefonline.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-chefonline.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07F961A680F5B00A75B9A /* chefonline.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = chefonline.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = chefonline/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = chefonline/Info.plist; sourceTree = "<group>"; };
-		4C582661DCCBB89D49B40826 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-chefonline/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
-		A7E5E70C3EB2A6B4910A6585 /* libPods-chefonline.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-chefonline.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		61D84496F9ED08D2EAE535CC /* Pods-chefonline.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-chefonline.release.xcconfig"; path = "Target Support Files/Pods-chefonline/Pods-chefonline.release.xcconfig"; sourceTree = "<group>"; };
+		748005F70F3983ABAFC91E98 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-chefonline/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = chefonline/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		BC4521BBBB3AE1D18794DAAD /* Pods-chefonline.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-chefonline.release.xcconfig"; path = "Target Support Files/Pods-chefonline/Pods-chefonline.release.xcconfig"; sourceTree = "<group>"; };
-		DD08F0F6B1CC24E40DABC399 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = chefonline/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
-		F07C1A839EE22D52B728CE5E /* Pods-chefonline.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-chefonline.debug.xcconfig"; path = "Target Support Files/Pods-chefonline/Pods-chefonline.debug.xcconfig"; sourceTree = "<group>"; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = chefonline/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* chefonline-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "chefonline-Bridging-Header.h"; path = "chefonline/chefonline-Bridging-Header.h"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -37,13 +37,21 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D52EE4E5D434EF4213B93DDE /* libPods-chefonline.a in Frameworks */,
+				F62FFA5BC3FC997FA243678F /* libPods-chefonline.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		1086DB2C702AC2FE61550410 /* ExpoModulesProviders */ = {
+			isa = PBXGroup;
+			children = (
+				CB11E9338E0EA1220E098736 /* chefonline */,
+			);
+			name = ExpoModulesProviders;
+			sourceTree = "<group>";
+		};
 		13B07FAE1A68108700A75B9A /* chefonline */ = {
 			isa = PBXGroup;
 			children = (
@@ -53,7 +61,7 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				DD08F0F6B1CC24E40DABC399 /* PrivacyInfo.xcprivacy */,
+				01014645A3F7D185FDC0DA7E /* PrivacyInfo.xcprivacy */,
 			);
 			name = chefonline;
 			sourceTree = "<group>";
@@ -62,26 +70,9 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				A7E5E70C3EB2A6B4910A6585 /* libPods-chefonline.a */,
+				09B0BFF48219D30E52F7D48F /* libPods-chefonline.a */,
 			);
 			name = Frameworks;
-			sourceTree = "<group>";
-		};
-		45F06D659F4A4EF1F9DAA678 /* chefonline */ = {
-			isa = PBXGroup;
-			children = (
-				4C582661DCCBB89D49B40826 /* ExpoModulesProvider.swift */,
-			);
-			name = chefonline;
-			sourceTree = "<group>";
-		};
-		492BF8F1FE54DE2972B9665E /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				F07C1A839EE22D52B728CE5E /* Pods-chefonline.debug.xcconfig */,
-				BC4521BBBB3AE1D18794DAAD /* Pods-chefonline.release.xcconfig */,
-			);
-			path = Pods;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -98,8 +89,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				492BF8F1FE54DE2972B9665E /* Pods */,
-				E27BD8F384DC67C66DD81AC8 /* ExpoModulesProviders */,
+				CC072AFBE28C870226CE418B /* Pods */,
+				1086DB2C702AC2FE61550410 /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -123,12 +114,22 @@
 			path = chefonline/Supporting;
 			sourceTree = "<group>";
 		};
-		E27BD8F384DC67C66DD81AC8 /* ExpoModulesProviders */ = {
+		CB11E9338E0EA1220E098736 /* chefonline */ = {
 			isa = PBXGroup;
 			children = (
-				45F06D659F4A4EF1F9DAA678 /* chefonline */,
+				748005F70F3983ABAFC91E98 /* ExpoModulesProvider.swift */,
 			);
-			name = ExpoModulesProviders;
+			name = chefonline;
+			sourceTree = "<group>";
+		};
+		CC072AFBE28C870226CE418B /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				024D949A5EBEE370A00ACEE1 /* Pods-chefonline.debug.xcconfig */,
+				61D84496F9ED08D2EAE535CC /* Pods-chefonline.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -139,13 +140,13 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "chefonline" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				EAAD0B85B07EB3CD8CD1360C /* [Expo] Configure project */,
+				F1A7730F645F68F0FD5DD0EB /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				4B6DA7F0F4062BA256E0E5BB /* [CP] Embed Pods Frameworks */,
+				2423B9264DE28D0B00CCF015 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -195,7 +196,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				23C6ED8A7D11AF9B349F6C0B /* PrivacyInfo.xcprivacy in Resources */,
+				C3758D4D9644B38CAE2F7E09 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -239,7 +240,7 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		4B6DA7F0F4062BA256E0E5BB /* [CP] Embed Pods Frameworks */ = {
+		2423B9264DE28D0B00CCF015 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -339,7 +340,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-chefonline/Pods-chefonline-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		EAAD0B85B07EB3CD8CD1360C /* [Expo] Configure project */ = {
+		F1A7730F645F68F0FD5DD0EB /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -366,7 +367,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				7F19B42C093B2910D92C94D7 /* ExpoModulesProvider.swift in Sources */,
+				F24C0930E524BC6186C5CAB3 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -375,35 +376,32 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = F07C1A839EE22D52B728CE5E /* Pods-chefonline.debug.xcconfig */;
+			baseConfigurationReference = 024D949A5EBEE370A00ACEE1 /* Pods-chefonline.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = chefonline/chefonline.entitlements;
-				CURRENT_PROJECT_VERSION = 2;
-				DEVELOPMENT_TEAM = SRLL3C95WU;
+				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					"FB_SONARKIT_ENABLED=1",
 				);
 				INFOPLIST_FILE = chefonline/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "ChefOnline - Online Takeaways";
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 9.0.3;
+				MARKETING_VERSION = 1.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
-				PRODUCT_BUNDLE_IDENTIFIER = "com.chefonline.chefonline";
-				PRODUCT_NAME = "chefonline";
+				PRODUCT_BUNDLE_IDENTIFIER = com.chefonline.chefonline;
+				PRODUCT_NAME = chefonline;
 				SWIFT_OBJC_BRIDGING_HEADER = "chefonline/chefonline-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -414,30 +412,27 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = BC4521BBBB3AE1D18794DAAD /* Pods-chefonline.release.xcconfig */;
+			baseConfigurationReference = 61D84496F9ED08D2EAE535CC /* Pods-chefonline.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = chefonline/chefonline.entitlements;
-				CURRENT_PROJECT_VERSION = 2;
-				DEVELOPMENT_TEAM = SRLL3C95WU;
+				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = chefonline/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "ChefOnline - Online Takeaways";
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 9.0.3;
+				MARKETING_VERSION = 1.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = "com.chefonline.chefonline";
-				PRODUCT_NAME = "chefonline";
+				PRODUCT_BUNDLE_IDENTIFIER = com.chefonline.chefonline;
+				PRODUCT_NAME = chefonline;
 				SWIFT_OBJC_BRIDGING_HEADER = "chefonline/chefonline-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

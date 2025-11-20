@@ -1,6 +1,7 @@
-import {useRouter} from 'expo-router';
-import {useEffect, useState} from 'react';
-import {FlatList, Image, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import Constants from 'expo-constants'; // ✅ ADD THIS
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Colors from '../../../constants/color';
 import getData from '../../../lib/api';
@@ -46,12 +47,12 @@ export default function SettingScreen() {
 				})
 			}
 		>
-			{/* Use static icon for "cart", otherwise use image */}
 			{item.title.toLowerCase() === 'cart' ? (
 				<Ionicons name="cart-outline" size={50} color={Colors.primary} />
 			) : (
 				<Image source={{uri: item.icon}} style={styles.icon} />
 			)}
+
 			<View style={styles.verticalLine} />
 			<Text style={styles.settingCardText}>{item.title}</Text>
 		</TouchableOpacity>
@@ -60,7 +61,9 @@ export default function SettingScreen() {
 	return (
 		<View style={styles.container}>
 			{loading ? (
-				<View style={styles.skeletonWrapper}>{[1, 2, 3, 4].map((_, i) => renderSkeleton(_, i))}</View>
+				<View style={styles.skeletonWrapper}>
+					{[1, 2, 3, 4].map((_, i) => renderSkeleton(_, i))}
+				</View>
 			) : (
 				<FlatList
 					data={settings}
@@ -70,6 +73,11 @@ export default function SettingScreen() {
 					columnWrapperStyle={{justifyContent: 'space-between'}}
 				/>
 			)}
+
+			{/* ✅ App Version at bottom */}
+			<View style={styles.versionContainer}>
+				<Text style={styles.versionText}>Version: {Constants.expoConfig?.version}</Text>
+			</View>
 		</View>
 	);
 }
@@ -107,7 +115,6 @@ const styles = StyleSheet.create({
 		fontWeight: '500',
 		textAlign: 'center',
 		textTransform: 'uppercase',
-		flexWrap: 'wrap',
 		width: '100%',
 	},
 
@@ -117,7 +124,7 @@ const styles = StyleSheet.create({
 		resizeMode: 'contain',
 	},
 
-	// 🔽 Skeleton styles
+	// Skeleton Styles
 	skeletonWrapper: {
 		flexDirection: 'row',
 		flexWrap: 'wrap',
@@ -137,5 +144,19 @@ const styles = StyleSheet.create({
 		backgroundColor: '#e0e0e0',
 		borderRadius: 4,
 		marginTop: 10,
+	},
+
+	// ✅ Version Text Bottom
+	versionContainer: {
+		position: 'absolute',
+		bottom: 10,
+		left: 0,
+		right: 0,
+		alignItems: 'center',
+	},
+
+	versionText: {
+		fontSize: 14,
+		color: Colors.textLight || '#777',
 	},
 });
