@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Keyboard,
@@ -60,10 +61,15 @@ export default function EditProfileScreen() {
   const [popupTitle, setPopupTitle] = useState('');
   const [popupMessage, setPopupMessage] = useState('');
   const [showErrors, setShowErrors] = useState(false);
+  const [popupIsSuccess, setPopupIsSuccess] = useState(false); // ✅ NEW
+
+  const router = useRouter();
 
   const dispatch = useDispatch();
   const authUser = useSelector((state) => state.auth.user);
   const userId = authUser?.userid;
+
+  console.log("auth user .....", authUser)
 
   // Date limits
   const todayStart = useMemo(() => {
@@ -169,22 +175,31 @@ export default function EditProfileScreen() {
         doa: anniversary,
       };
 
+      console.log("userEditProfileApi payload.....", payload)
+
       const response = await userEditProfileApi(payload);
 
-      if (response?.status === 'ok' || response?.status === 'Success' || response?.success) {
+      console.log("edit profile", response)
+
+      if (response?.status === 'Success' || response?.status === 'Success') {
         dispatch(setUser({ user: response?.UserDetails }));
 
         setPopupTitle('Profile Updated');
         setPopupMessage(response?.msg || 'Your changes have been saved successfully.');
+        setPopupIsSuccess(true);      // ✅ success
         setPopupVisible(true);
       } else {
         setPopupTitle('Update Failed');
-        setPopupMessage(response?.msg || 'Something went wrong!');
+        setPopupMessage(response?.msg || 'Connection error. Please try again.');
+        setPopupIsSuccess(false);     // ❌ not success
         setPopupVisible(true);
       }
+
+      console.log("auth user updated ....", authUser)
     } catch {
       setPopupTitle('Update Failed');
       setPopupMessage('Failed to update profile. Please try again.');
+      setPopupIsSuccess(false);       // ❌ not success
       setPopupVisible(true);
     } finally {
       setSaving(false);
@@ -262,35 +277,33 @@ export default function EditProfileScreen() {
                 </View>
 
                 {/* Phone + Telephone */}
-                <View style={styles.row}>
-                  <View style={[styles.field, styles.half]}>
-                    <Label text="Phone" required />
-                    <TextInput
-                      style={[styles.input, styles.inputDisabled]}
-                      value={phone}
-                      editable={false}
-                    />
-                    {showErrors && !isValidUKMobile(phone) && (
-                      <Text style={styles.errorText}>Phone must be UK format 07XXXXXXXXX</Text>
-                    )}
-                  </View>
+                <View style={[styles.field, styles.half]}>
+                  <Label text="Phone" required />
+                  <TextInput
+                    style={[styles.input, styles.inputDisabled]}
+                    value={phone}
+                    editable={false}
+                  />
+                  {showErrors && !isValidUKMobile(phone) && (
+                    <Text style={styles.errorText}>Phone must be UK format 07XXXXXXXXX</Text>
+                  )}
+                </View>
 
-                  <View style={[styles.field, styles.half]}>
-                    <Label text="Telephone" />
-                    <TextInput
-                      style={inputStyle(isTelephone(telephone))}
-                      value={telephone}
-                      placeholder="Landline"
-                      keyboardType="phone-pad"
-                      onChangeText={(t) => setTelephone(sanitizeTelephone(t))}
-                      placeholderTextColor={Colors.placeholder}
-                    />
-                    {showErrors && !isTelephone(telephone) && (
-                      <Text style={styles.errorText}>
-                        Use digits, spaces, + - ( ); at least 6 digits.
-                      </Text>
-                    )}
-                  </View>
+                <View style={[styles.field, styles.half]}>
+                  <Label text="Telephone" />
+                  <TextInput
+                    style={inputStyle(isTelephone(telephone))}
+                    value={telephone}
+                    placeholder="Landline"
+                    keyboardType="phone-pad"
+                    onChangeText={(t) => setTelephone(sanitizeTelephone(t))}
+                    placeholderTextColor={Colors.placeholder}
+                  />
+                  {showErrors && !isTelephone(telephone) && (
+                    <Text style={styles.errorText}>
+                      Use digits, spaces, + - ( ); at least 6 digits.
+                    </Text>
+                  )}
                 </View>
 
                 {/* DOB */}
@@ -463,7 +476,12 @@ export default function EditProfileScreen() {
           confirmText="Great!"
           showCancel={false}
           maskClosable={false}
-          onConfirm={() => setPopupVisible(false)}
+          onConfirm={() => {
+            setPopupVisible(false);
+            if (popupIsSuccess) {
+              router.replace('/(tabs)/profile'); // ✅ Only redirect on success
+            }
+          }}
         />
 
         {/* Title Sheet */}
