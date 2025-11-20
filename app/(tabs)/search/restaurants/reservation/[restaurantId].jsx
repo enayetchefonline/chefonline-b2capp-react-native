@@ -25,7 +25,6 @@ import { getReservationTimeSlots } from '../../../../../lib/utils/reservationSch
 export default function ReservationScreen() {
 	const { restaurantId } = useLocalSearchParams();
 
-	// 🔗 get schedule from redux (same as Checkout)
 	const restaurantDetails = useSelector((state) => state.restaurantDetail.data);
 	const restaurantSchedule = restaurantDetails?.restuarent_schedule?.schedule || [];
 
@@ -49,27 +48,23 @@ export default function ReservationScreen() {
 
 	const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
 	const [timeSheetVisible, setTimeSheetVisible] = useState(false);
-	const [titleSheetVisible, setTitleSheetVisible] = useState(false); // 👈 NEW
+	const [titleSheetVisible, setTitleSheetVisible] = useState(false);
 
-	// Start-of-day for today; used to block past dates
 	const todayStart = useMemo(() => {
 		const d = new Date();
 		d.setHours(0, 0, 0, 0);
 		return d;
 	}, []);
 
-	// ========= Validators =========
 	const isValidEmail = (val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim());
 	const isValidUKMobile = (val) => /^07\d{9}$/.test(val.trim());
 
-	// Title: letters + spaces + dots only (optional field)
 	const isValidTitle = (val) => {
 		const s = val.trim();
-		if (!s) return true; // optional
+		if (!s) return true;
 		return /^[A-Za-z. ]{1,10}$/.test(s);
 	};
 
-	// Name: letters, spaces, hyphens, apostrophes; no digits or '@'
 	const isName = (val) => {
 		const s = val.trim();
 		if (!s) return false;
@@ -77,7 +72,6 @@ export default function ReservationScreen() {
 		return /^[A-Za-z' -]+$/.test(s);
 	};
 
-	// guests must be integer >= 1
 	const guestsNum = Number(guests);
 	const isValidGuests = Number.isInteger(guestsNum) && guestsNum >= 1;
 
@@ -96,6 +90,7 @@ export default function ReservationScreen() {
 	// ========= Date Picker =========
 	const showDatePicker = () => setDatePickerVisibility(true);
 	const hideDatePicker = () => setDatePickerVisibility(false);
+
 	const handleConfirmDate = (dateObj) => {
 		if (dateObj < todayStart) {
 			hideDatePicker();
@@ -104,12 +99,15 @@ export default function ReservationScreen() {
 		const year = dateObj.getFullYear();
 		const month = String(dateObj.getMonth() + 1).padStart(2, '0');
 		const day = String(dateObj.getDate()).padStart(2, '0');
-		setDate(`${day}/${month}/${year}`);
+
+		// ✅ DD-MM-YYYY format
+		setDate(`${day}-${month}-${year}`);
+
 		setTime('');
 		hideDatePicker();
 	};
 
-	// ========= Time slots (UK-time aware) =========
+	// ========= Time slots =========
 	const availableTimeSlots = useMemo(
 		() => getReservationTimeSlots(restaurantSchedule, date),
 		[restaurantSchedule, date]
@@ -123,7 +121,6 @@ export default function ReservationScreen() {
 		setTimeSheetVisible(true);
 	};
 
-	// ========= API =========
 	const getUserIp = async () => {
 		try {
 			const response = await fetch('https://api.ipify.org?format=json');
@@ -156,7 +153,7 @@ export default function ReservationScreen() {
 				ipAddress: ip,
 			};
 
-			console.log("reservation payload", payload)
+			console.log('reservation payload', payload);
 
 			const response = await makeReservation(payload);
 
@@ -186,7 +183,6 @@ export default function ReservationScreen() {
 		}
 	};
 
-	// Static title options
 	const TITLE_OPTIONS = ['Mr', 'Miss', 'Mrs', 'Ms', 'Dr'];
 
 	return (
@@ -278,7 +274,7 @@ export default function ReservationScreen() {
 								)}
 							</View>
 
-							{/* Phone & Telephone */}
+							{/* Phone */}
 							<View style={[styles.field, styles.half]}>
 								<Text style={styles.label}>
 									Mobile No <Text style={styles.required}>*</Text>
@@ -299,17 +295,6 @@ export default function ReservationScreen() {
 									<Text style={styles.errorText}>Enter a valid mobile number</Text>
 								)}
 							</View>
-							{/* <View style={[styles.field, styles.half]}>
-								<Text style={styles.label}>Telephone No</Text>
-								<TextInput
-									style={styles.input}
-									placeholder="Landline"
-									keyboardType="phone-pad"
-									value={telephone}
-									onChangeText={setTelephone}
-									placeholderTextColor={Colors.placeholder}
-								/>
-							</View> */}
 
 							{/* Date */}
 							<View style={styles.field}>
@@ -320,7 +305,7 @@ export default function ReservationScreen() {
 									<View pointerEvents="none">
 										<TextInput
 											style={styles.input}
-											placeholder="DD/MM/YYYY"
+											placeholder="DD-MM-YYYY" // ✅ updated placeholder
 											value={date}
 											placeholderTextColor={Colors.placeholder}
 											editable={false}
@@ -330,7 +315,7 @@ export default function ReservationScreen() {
 								{!date.trim() && showErrors && <Text style={styles.errorText}>Date is required</Text>}
 							</View>
 
-							{/* Time - bottom sheet trigger */}
+							{/* Time */}
 							<View style={styles.field}>
 								<Text style={styles.label}>
 									Select Time <Text style={styles.required}>*</Text>
@@ -438,31 +423,40 @@ export default function ReservationScreen() {
 				transparent={true}
 				onRequestClose={() => setTimeSheetVisible(false)}
 			>
-				<View style={styles.bottomSheetBackdrop}>
-					<View style={styles.bottomSheetContainer}>
-						<Text style={styles.sheetTitle}>Select Time</Text>
-						<ScrollView>
-							{availableTimeSlots.length === 0 ? (
-								<Text style={{ textAlign: 'center', paddingVertical: 16 }}>
-									No available slots for this day.
-								</Text>
-							) : (
-								availableTimeSlots.map((slot, index) => (
-									<TouchableOpacity
-										key={index}
-										style={styles.timeSlotItem}
-										onPress={() => {
-											setTime(slot);
-											setTimeSheetVisible(false);
-										}}
-									>
-										<Text style={styles.timeSlotText}>{slot}</Text>
-									</TouchableOpacity>
-								))
-							)}
-						</ScrollView>
+				<TouchableWithoutFeedback onPress={() => setTimeSheetVisible(false)}>
+					<View style={styles.bottomSheetBackdrop}>
+						<TouchableWithoutFeedback onPress={() => { }}>
+							<View style={styles.bottomSheetContainer}>
+								<Text style={styles.sheetTitle}>Select Time</Text>
+								<ScrollView>
+									{availableTimeSlots.length === 0 ? (
+										<TouchableOpacity
+											style={{ paddingVertical: 16 }}
+											onPress={() => setTimeSheetVisible(false)}
+										>
+											<Text style={{ textAlign: 'center' }}>
+												No available slots for this day. Tap to close.
+											</Text>
+										</TouchableOpacity>
+									) : (
+										availableTimeSlots.map((slot, index) => (
+											<TouchableOpacity
+												key={index}
+												style={styles.timeSlotItem}
+												onPress={() => {
+													setTime(slot);
+													setTimeSheetVisible(false);
+												}}
+											>
+												<Text style={styles.timeSlotText}>{slot}</Text>
+											</TouchableOpacity>
+										))
+									)}
+								</ScrollView>
+							</View>
+						</TouchableWithoutFeedback>
 					</View>
-				</View>
+				</TouchableWithoutFeedback>
 			</Modal>
 
 			{/* Title Bottom Sheet */}
@@ -527,7 +521,6 @@ const styles = StyleSheet.create({
 	required: { color: '#D32F2F' },
 	errorText: { color: '#D32F2F', fontSize: 12, marginTop: 4 },
 
-	// bottom sheet
 	bottomSheetBackdrop: {
 		flex: 1,
 		justifyContent: 'flex-end',
