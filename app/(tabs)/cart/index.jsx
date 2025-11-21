@@ -1,14 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
-import { RadioButton, Snackbar } from 'react-native-paper';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Modal, RadioButton, Snackbar } from 'react-native-paper';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
 import CustomPopUp from '../../../components/ui/CustomPopUp';
 
 // API and Redux actions
-import { carrierBag } from '../../../lib/api';
+import { useIpAddress } from '../../../hooks/useIpAddress';
+import { carrierBag, checkUserPhone } from '../../../lib/api';
 import {
   addItemToCart,
   setCarryBag,
@@ -17,6 +18,8 @@ import {
   setSelectedRestaurantOfferId,
   updateItemQuantity,
 } from '../../../store/slices/cartSlice';
+
+import { setUser } from '../../../store/slices/authSlice';
 
 // --- FIXED COLOR CONSTANTS ---
 const COLORS = {
@@ -40,6 +43,9 @@ export default function CartScreen() {
   const [showMinOrderPopup, setShowMinOrderPopup] = useState(false);
   const [showNoOfferDiscountPopup, setShowNoOfferDiscountPopup] = useState(false);
 
+  const [numberVrificationModalVisible, setNumberVrificationModalVisible] = useState(false);
+  const [numberVrificationOTPModalVisible, setNumberVrificationOTPModalVisible] = useState(false);
+
   const [visibleSnackBar, setVisibleSnackBar] = useState(false);
   const [snackBarMessage, setSnackBarMessage] = useState('');
 
@@ -51,7 +57,27 @@ export default function CartScreen() {
   const storeSelectedDiscountId = useSelector((state) => state.cart.selected_discount_id);
   const storeSelectedOfferId = useSelector((state) => state.cart.selected_offer_id);
 
+  // get user, token, ip from auth slice
+  const { user: authUser, token: authToken, ip: authIp } = useSelector((state) => state.auth);
+
+  // 🔢 Phone modal state
+  const [phoneInput, setPhoneInput] = useState(authUser?.mobile_no || '');
+  const [phoneError, setPhoneError] = useState('');
+
+  // 🔔 Phone verify status popup
+  const [phoneStatusPopupVisible, setPhoneStatusPopupVisible] = useState(false);
+  const [phoneStatusPopupTitle, setPhoneStatusPopupTitle] = useState('');
+  const [phoneStatusPopupMessage, setPhoneStatusPopupMessage] = useState('');
+
+  // IP address via reusable hook
+  const { ipAddress } = useIpAddress();
+
+  const isUserHasNumber = authUser?.mobile_no && authUser?.mobile_no !== '';
+
+  console.log('isUserHasNumber', isUserHasNumber);
+
   const availableModes = (storeOrderPolicy?.policy || []).map((p) => p.policy_name);
+
   const [mode, setMode] = useState(null);
 
   const cartItems = Object.values(storeItemList || {}).map(({ item, quantity }) => ({
@@ -212,6 +238,12 @@ export default function CartScreen() {
         return;
       }
 
+      // if no mobile number, open phone modal
+      if (!authUser?.mobile_no) {
+        setNumberVrificationModalVisible(true);
+        return;
+      }
+
       if (!mode) {
         setSnackBarMessage('Please select order type: Collection or Delivery');
         setVisibleSnackBar(true);
@@ -256,6 +288,88 @@ export default function CartScreen() {
       : parseFloat(selectedDiscount?.discount_amount || 0);
 
   const total = subtotal - discountAmount;
+
+  // 🔢 Phone validation helpers (for modal only, no change to existing cart logic)
+  const ukMobileRegex = /^07\d{9}$/;
+  const isPhoneValid = ukMobileRegex.test((phoneInput || '').trim());
+
+  // ✅ callCheckUserPhone – calls API with proper payload + returns response
+  const callCheckUserPhone = async (phone) => {
+    try {
+      const payload = {
+        user_id: authUser?.userid,
+        ip_address: ipAddress, // from useIpAddress hook
+        phone_no: phone,
+      };
+
+      const response = await checkUserPhone(payload);
+      console.log('response checkUserPhone', response);
+      return response;
+    } catch (error) {
+      console.error('checkUserPhone error:', error);
+      throw error;
+    }
+  };
+
+  // ✅ Only validate while typing (no API here)
+  const handlePhoneChange = (text) => {
+    const cleaned = text.replace(/\D/g, ''); // keep digits only
+    setPhoneInput(cleaned);
+
+    if (cleaned && !ukMobileRegex.test(cleaned)) {
+      setPhoneError('Enter a valid UK mobile number (e.g., 07123456789)');
+    } else {
+      setPhoneError('');
+    }
+  };
+
+  // ✅ Save button: call API, update Redux, show popup
+  const handleSavePhone = async () => {
+    const trimmed = (phoneInput || '').trim();
+
+    if (!ukMobileRegex.test(trimmed)) {
+      setPhoneError('Enter a valid UK mobile number (e.g., 07123456789)');
+      return;
+    }
+
+    try {
+      const response = await callCheckUserPhone(trimmed);
+
+      if (response?.status === 'success') {
+        // update user in Redux
+        dispatch(
+          setUser({
+            user: {
+              ...authUser,
+              mobile_no: trimmed,
+              mobile_verify_status: '0', // still not verified until OTP
+            },
+            token: authToken,
+            ip: authIp || ipAddress,
+          })
+        );
+
+        // close phone modal
+        setNumberVrificationModalVisible(false);
+
+        // show success popup
+        setPhoneStatusPopupTitle('Verification Code Sent');
+        setPhoneStatusPopupMessage(response.msg || 'OTP has been sent to your mobile number.');
+        setPhoneStatusPopupVisible(true);
+
+        // you can open OTP modal here later if needed
+        // setNumberVrificationOTPModalVisible(true);
+      } else {
+        setPhoneStatusPopupTitle('Error');
+        setPhoneStatusPopupMessage(response?.msg || 'Failed to verify number. Please try again.');
+        setPhoneStatusPopupVisible(true);
+      }
+    } catch (error) {
+      setPhoneStatusPopupTitle('Error');
+      setPhoneStatusPopupMessage('Something went wrong. Please try again.');
+      setPhoneStatusPopupVisible(true);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -404,6 +518,16 @@ export default function CartScreen() {
         }}
       />
 
+      {/* Phone verify status popup */}
+      <CustomPopUp
+        visible={phoneStatusPopupVisible}
+        title={phoneStatusPopupTitle}
+        message={phoneStatusPopupMessage}
+        onConfirm={() => setPhoneStatusPopupVisible(false)}
+        showCancel={false}
+        confirmText="OK"
+      />
+
       <View style={{ position: 'absolute', bottom: 16, left: 0, right: 0 }}>
         <Snackbar
           visible={visibleSnackBar}
@@ -423,6 +547,52 @@ export default function CartScreen() {
           {snackBarMessage}
         </Snackbar>
       </View>
+
+      {/* Phone Verification Modal */}
+      <Modal
+        visible={numberVrificationModalVisible}
+        onDismiss={() => setNumberVrificationModalVisible(false)}
+        contentContainerStyle={styles.phoneModalContainer}
+      >
+        <Text style={styles.phoneModalTitle}>Mobile Number</Text>
+
+        <TextInput
+          style={styles.phoneInput}
+          placeholder="Enter your UK mobile number (e.g., 07123456789)"
+          placeholderTextColor="#D1D5DB"
+          keyboardType="phone-pad"
+          maxLength={11}
+          value={phoneInput}
+          onChangeText={handlePhoneChange}
+        />
+
+        {phoneError ? <Text style={styles.phoneError}>{phoneError}</Text> : null}
+
+        <View style={styles.phoneButtonRow}>
+          <TouchableOpacity
+            style={[styles.phoneButton, styles.phoneCancelButton]}
+            onPress={() => {
+              setNumberVrificationModalVisible(false);
+              setPhoneInput(authUser?.mobile_no || '');
+              setPhoneError('');
+            }}
+          >
+            <Text style={styles.phoneCancelText}>Cancel</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.phoneButton,
+              styles.phoneSaveButton,
+              !isPhoneValid && { opacity: 0.5 },
+            ]}
+            onPress={handleSavePhone}
+            disabled={!isPhoneValid}
+          >
+            <Text style={styles.phoneSaveText}>Save</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -518,5 +688,71 @@ const styles = StyleSheet.create({
     marginRight: 8,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+
+  phoneModalContainer: {
+    backgroundColor: COLORS.white,
+    padding: 20,
+    marginHorizontal: 24,
+    borderRadius: 8,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+  },
+
+  phoneModalTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+    color: COLORS.text,
+  },
+
+  phoneInput: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    color: COLORS.text,
+  },
+
+  phoneError: {
+    color: '#DC2626',
+    fontSize: 12,
+    marginTop: 6,
+  },
+
+  phoneButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 20,
+  },
+
+  phoneButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+
+  phoneCancelButton: {
+    backgroundColor: '#F3F4F6',
+  },
+
+  phoneSaveButton: {
+    backgroundColor: COLORS.primary,
+  },
+
+  phoneCancelText: {
+    color: '#4B5563',
+    fontSize: 14,
+  },
+
+  phoneSaveText: {
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

@@ -26,7 +26,17 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Allow this app to access your location."
+        "NSLocationWhenInUseUsageDescription": "Allow this app to access your location.",
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSExceptionDomains": {
+            "smartrestaurantsolutions.com": {
+              "NSIncludesSubdomains": true,
+              "NSTemporaryExceptionAllowsInsecureHTTPLoads": true,
+              "NSTemporaryExceptionMinimumTLSVersion": "TLSv1.0"
+            }
+          }
+        }
       },
       "bundleIdentifier": "com.chefonline.chefonline"
     },

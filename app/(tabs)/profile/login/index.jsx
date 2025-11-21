@@ -14,7 +14,7 @@ import {
 	View,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import Colors from '../../../../constants/color';
 import { userLoginApi } from '../../../../lib/api';
 import { setUser } from '../../../../store/slices/authSlice';
@@ -40,6 +40,10 @@ export default function LoginScreen() {
 	const [checkingLogin, setCheckingLogin] = useState(true);
 
 	const dispatch = useDispatch();
+
+	const authUser = useSelector((state) => state.auth.user);
+
+	console.log("authUser", authUser)
 
 	// Initialize Google request (use same client for all)
 	const [request, response, promptAsync] = Google.useAuthRequest({
@@ -160,6 +164,8 @@ export default function LoginScreen() {
 		try {
 			const ip = await getUserIp();
 			const response = await userLoginApi(email, password);
+
+			console.log("user info", response)
 
 			if (response?.status === 'Success' && response?.UserDetails?.access_token) {
 				const {access_token, ...userDetails} = response.UserDetails;

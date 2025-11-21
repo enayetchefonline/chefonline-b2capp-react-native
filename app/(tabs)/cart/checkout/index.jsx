@@ -92,7 +92,7 @@ export default function CheckoutScreen() {
 
 	const restaurantSchedule = restaurantDetails?.restuarent_schedule?.schedule || [];
 
-	console.log("restaurantSchedule", JSON.stringify(restaurantSchedule, null, 2));
+	// console.log("restaurantSchedule", JSON.stringify(restaurantSchedule, null, 2));
 
 	// Controlled input values
 	const [specialNote, setSpecialNoteText] = useState(storeNote || '');
@@ -584,6 +584,10 @@ export default function CheckoutScreen() {
 			}
 
 			if (response.status === 'Failure') {
+				alert(response.msg || 'Order failed. Please try again later.');
+			}
+
+			if (response.status === 'Success') {
 				alert(response.msg || 'Order failed. Please try again later.');
 			}
 
