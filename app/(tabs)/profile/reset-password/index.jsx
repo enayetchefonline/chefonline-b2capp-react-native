@@ -28,15 +28,20 @@ export default function ResetPasswordScreen() {
 	const authUser = useSelector((state) => state.auth.user);
 
 	const handleReset = async () => {
-		if (newPwd !== confirmPwd) {
-			return alert('New password and confirm password must match');
-		}
+		// trim to avoid "   " as valid passwords
+		const trimmedCurrent = currentPwd.trim();
+		const trimmedNew = newPwd.trim();
+		const trimmedConfirm = confirmPwd.trim();
 
-		if (!currentPwd || !newPwd) {
+		if (!trimmedCurrent || !trimmedNew || !trimmedConfirm) {
 			return alert('Please fill all required fields');
 		}
 
-		if (currentPwd === newPwd) {
+		if (trimmedNew !== trimmedConfirm) {
+			return alert('New password and confirm password must match');
+		}
+
+		if (trimmedCurrent === trimmedNew) {
 			return alert('New password must be different from the current password');
 		}
 
@@ -45,8 +50,8 @@ export default function ResetPasswordScreen() {
 		try {
 			const response = await resetPassword({
 				email: authUser?.email,
-				previousPassword: currentPwd,
-				newPassword: newPwd,
+				previousPassword: trimmedCurrent,
+				newPassword: trimmedNew,
 			});
 
 			if (response?.msg?.toLowerCase().includes('success')) {
@@ -62,7 +67,6 @@ export default function ResetPasswordScreen() {
 		}
 	};
 
-
 	// reusable field renderer
 	const renderPasswordField = (label, value, onChange, show, setShow) => (
 		<View style={styles.field}>
@@ -74,7 +78,8 @@ export default function ResetPasswordScreen() {
 					secureTextEntry={!show}
 					value={value}
 					onChangeText={onChange}
-					placeholderTextColor={Colors.placeholder}
+					// lighter placeholder color
+					placeholderTextColor="#D1D5DB"
 				/>
 				<TouchableOpacity onPress={() => setShow((prev) => !prev)}>
 					<Ionicons name={show ? 'eye-off-outline' : 'eye-outline'} size={20} color={Colors.text} />
