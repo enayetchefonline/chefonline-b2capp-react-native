@@ -1,3 +1,5 @@
+// app/(tabs)/profile/edit-profile/index.js
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -9,16 +11,16 @@ import {
   Text,
   TextInput,
   TouchableWithoutFeedback,
-  View
+  View,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
+
 import CustomButton from '../../../../components/ui/CustomButton';
 import CustomPopUp from '../../../../components/ui/CustomPopUp';
 import Colors from '../../../../constants/color';
 import { userEditProfileApi } from '../../../../lib/api';
 import { setUser } from '../../../../store/slices/authSlice';
 
-// ⭐ Reusable Label Component
 const Label = ({ text, required = false }) => (
   <Text style={styles.label}>
     {text} {required && <Text style={{ color: 'red' }}>*</Text>}
@@ -43,10 +45,11 @@ export default function EditProfileScreen() {
 
   const router = useRouter();
   const dispatch = useDispatch();
-  const authUser = useSelector((state) => state.auth.user);
-  const userId = authUser?.userid;
 
-  console.log('auth user .....', authUser);
+  const authUser = useSelector((state) => state.auth.user);
+  const tokenFromStore = useSelector((state) => state.auth.token);
+
+  const userId = authUser?.userid;
 
   useEffect(() => {
     if (authUser) {
@@ -60,26 +63,18 @@ export default function EditProfileScreen() {
     }
   }, [authUser]);
 
-  // ===== VALIDATION METHODS =====
-
+  // ===== VALIDATION =====
   const isValidEmail = (val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((val || '').trim());
-
-  // ⭐ Strict UK Mobile: 07xxxxxxxxx
   const isValidUKMobile = (val) => /^07\d{9}$/.test((val || '').trim());
-
   const sanitizeName = (t) => t.replace(/[^A-Za-z' -]/g, '');
   const isName = (val) => /^[A-Za-z' -]+$/.test((val || '').trim());
-
   const sanitizeTownCountry = (t) => t.replace(/[^A-Za-z -]/g, '');
   const isTownCountry = (val) => /^[A-Za-z -]+$/.test((val || '').trim());
-
   const isAddress = (val) => !!(val || '').trim();
-
   const normalizePostcode = (pc) => (pc || '').toUpperCase().replace(/\s+/g, ' ').trim();
   const isUKPostcode = (pc) =>
     /^(GIR 0AA|[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2})$/i.test((pc || '').toUpperCase().trim());
 
-  // ⭐ Final Form Validator (no Title, no Country, no DOB, no Address2)
   const isFormValid = () =>
     isName(firstName) &&
     isName(lastName) &&
@@ -101,22 +96,47 @@ export default function EditProfileScreen() {
         last_name: lastName.trim(),
         email: email.trim(),
         mobile_no: phone.trim(),
-        telephone_no: authUser?.telephone_no || '', // preserve old value
+        telephone_no: authUser?.telephone_no || '',
         address1: address1.trim(),
-        address2: authUser?.address2 || '',        // keep existing or empty
+        address2: authUser?.address2 || '',
         city: town.trim(),
         postcode: normalizePostcode(postcode),
-        // no title, no country, no dob_date, no doa
       };
 
       console.log('userEditProfileApi payload.....', payload);
 
       const response = await userEditProfileApi(payload);
 
-      console.log('edit profile', response);
+      console.log('edit profile...............', response);
 
       if (response?.status === 'Success') {
-        dispatch(setUser({ user: response?.UserDetails }));
+        // ✅ Merge old + new
+        const updatedUser = {
+          ...(authUser || {}),
+          ...(response?.UserDetails || {}),
+        };
+
+        // Token: keep existing token or use access_token from user
+        const finalToken =
+          tokenFromStore || updatedUser.access_token || authUser?.access_token || null;
+
+        // 1) Update Redux
+        dispatch(
+          setUser({
+            user: updatedUser,
+            token: finalToken,
+          })
+        );
+
+        // 2) Update AsyncStorage to keep same structure as login
+        try {
+          await AsyncStorage.setItem('userData', JSON.stringify(updatedUser));
+          if (finalToken) {
+            await AsyncStorage.setItem('accessToken', finalToken);
+          }
+        } catch (e) {
+          console.log('Failed to save updated user to AsyncStorage', e);
+        }
 
         setPopupTitle('Profile Updated');
         setPopupMessage(response?.msg || 'Your changes have been saved successfully.');
@@ -128,8 +148,6 @@ export default function EditProfileScreen() {
         setPopupIsSuccess(false);
         setPopupVisible(true);
       }
-
-      console.log('auth user updated ....', authUser);
     } catch (e) {
       console.log('edit profile error', e);
       setPopupTitle('Update Failed');
@@ -141,168 +159,136 @@ export default function EditProfileScreen() {
     }
   };
 
-  // Highlight invalid fields
   const inputStyle = (valid) => [styles.input, showErrors && !valid && styles.inputError];
 
   return (
-    <>
-      <View style={{ flex: 1 }}>
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
-        >
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-              <View style={styles.formContainer}>
-                {/* Names */}
-                <View style={styles.row}>
-                  <View style={[styles.field, styles.half]}>
-                    <Label text="First Name" required />
-                    <TextInput
-                      style={inputStyle(isName(firstName))}
-                      placeholder="First name"
-                      value={firstName}
-                      onChangeText={(t) => setFirstName(sanitizeName(t))}
-                      placeholderTextColor={Colors.placeholder}
-                    />
-                    {showErrors && !isName(firstName) && (
-                      <Text style={styles.errorText}>Only letters, spaces, - and ' allowed.</Text>
-                    )}
-                  </View>
-
-                  <View style={[styles.field, styles.half]}>
-                    <Label text="Last Name" required />
-                    <TextInput
-                      style={inputStyle(isName(lastName))}
-                      placeholder="Last name"
-                      value={lastName}
-                      onChangeText={(t) => setLastName(sanitizeName(t))}
-                      placeholderTextColor={Colors.placeholder}
-                    />
-                    {showErrors && !isName(lastName) && (
-                      <Text style={styles.errorText}>Only letters, spaces, - and ' allowed.</Text>
-                    )}
-                  </View>
-                </View>
-
-                {/* Email */}
-                <View style={styles.field}>
-                  <Label text="Email" required />
+    <View style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+            <View style={styles.formContainer}>
+              <View style={styles.row}>
+                <View style={[styles.field, styles.half]}>
+                  <Label text="First Name" required />
                   <TextInput
-                    style={[styles.input, styles.inputDisabled]}
-                    value={email}
-                    editable={false}
-                  />
-                </View>
-
-                {/* Phone (Editable) */}
-                <View style={styles.field}>
-                  <Label text="Mobile No" required />
-                  <TextInput
-                    style={inputStyle(isValidUKMobile(phone))}
-                    value={phone}
-                    onChangeText={setPhone}
-                    placeholder="07XXXXXXXXX"
-                    keyboardType="phone-pad"
-                    maxLength={11}
+                    style={inputStyle(isName(firstName))}
+                    placeholder="First name"
+                    value={firstName}
+                    onChangeText={(t) => setFirstName(sanitizeName(t))}
                     placeholderTextColor={Colors.placeholder}
                   />
-                  {showErrors && !isValidUKMobile(phone) && (
-                    <Text style={styles.errorText}>Phone must be UK format 07XXXXXXXXX</Text>
-                  )}
                 </View>
 
-                {/* Address 1 */}
-                <View style={styles.field}>
-                  <Label text="Address" required />
+                <View style={[styles.field, styles.half]}>
+                  <Label text="Last Name" required />
                   <TextInput
-                    style={inputStyle(isAddress(address1))}
-                    value={address1}
-                    onChangeText={setAddress1}
-                    placeholder="Street address, P.O. box, etc."
+                    style={inputStyle(isName(lastName))}
+                    placeholder="Last name"
+                    value={lastName}
+                    onChangeText={(t) => setLastName(sanitizeName(t))}
                     placeholderTextColor={Colors.placeholder}
                   />
-                  {showErrors && !isAddress(address1) && (
-                    <Text style={styles.errorText}>Address is required.</Text>
-                  )}
-                </View>
-
-                {/* Town / Postcode */}
-                <View style={styles.row}>
-                  <View style={[styles.field, styles.half]}>
-                    <Label text="Postcode" required />
-                    <TextInput
-                      style={inputStyle(isUKPostcode(postcode))}
-                      value={postcode}
-                      onChangeText={(t) => setPostcode(t.toUpperCase())}
-                      placeholder="SW1A 1AA"
-                      autoCapitalize="characters"
-                      placeholderTextColor={Colors.placeholder}
-                    />
-                    {showErrors && !isUKPostcode(postcode) && (
-                      <Text style={styles.errorText}>Enter a valid UK postcode (e.g., SW1A 1AA).</Text>
-                    )}
-                  </View>
-
-                  <View style={[styles.field, styles.half]}>
-                    <Label text="Town/City" required />
-                    <TextInput
-                      style={inputStyle(isTownCountry(town))}
-                      value={town}
-                      onChangeText={(t) => setTown(sanitizeTownCountry(t))}
-                      placeholder="Town"
-                      placeholderTextColor={Colors.placeholder}
-                    />
-                    {showErrors && !isTownCountry(town) && (
-                      <Text style={styles.errorText}>Town is required (letters and spaces only).</Text>
-                    )}
-                  </View>
-                </View>
-
-                <View style={styles.buttonContainer}>
-                  <CustomButton
-                    title="SAVE CHANGES"
-                    iconName="save-outline"
-                    loading={saving}
-                    onPress={handleSave}
-                    loadingText="Saving…"
-                  />
-                  {!isFormValid() && showErrors && (
-                    <Text style={{ color: '#D32F2F', marginTop: 10, textAlign: 'center' }}>
-                      Please fix the highlighted fields.
-                    </Text>
-                  )}
                 </View>
               </View>
-            </ScrollView>
-          </TouchableWithoutFeedback>
-        </KeyboardAvoidingView>
 
-        {/* Popup */}
-        <CustomPopUp
-          visible={popupVisible}
-          title={popupTitle}
-          message={popupMessage}
-          confirmText="Great!"
-          showCancel={false}
-          maskClosable={false}
-          onConfirm={() => {
-            setPopupVisible(false);
-            if (popupIsSuccess) {
-              router.replace('/(tabs)/profile');
-            }
-          }}
-        />
-      </View>
-    </>
+              <View style={styles.field}>
+                <Label text="Email" required />
+                <TextInput style={[styles.input, styles.inputDisabled]} value={email} editable={false} />
+              </View>
+
+              <View style={styles.field}>
+                <Label text="Mobile No" required />
+                <TextInput
+                  style={inputStyle(isValidUKMobile(phone))}
+                  value={phone}
+                  onChangeText={setPhone}
+                  placeholder="07XXXXXXXXX"
+                  keyboardType="phone-pad"
+                  maxLength={11}
+                  placeholderTextColor={Colors.placeholder}
+                />
+              </View>
+
+              <View style={styles.field}>
+                <Label text="Address" required />
+                <TextInput
+                  style={inputStyle(isAddress(address1))}
+                  value={address1}
+                  onChangeText={setAddress1}
+                  placeholder="Street address, P.O. box, etc."
+                  placeholderTextColor={Colors.placeholder}
+                />
+              </View>
+
+              <View style={styles.row}>
+                <View style={[styles.field, styles.half]}>
+                  <Label text="Postcode" required />
+                  <TextInput
+                    style={inputStyle(isUKPostcode(postcode))}
+                    value={postcode}
+                    onChangeText={(t) => setPostcode(t.toUpperCase())}
+                    placeholder="SW1A 1AA"
+                    autoCapitalize="characters"
+                    placeholderTextColor={Colors.placeholder}
+                  />
+                </View>
+
+                <View style={[styles.field, styles.half]}>
+                  <Label text="Town/City" required />
+                  <TextInput
+                    style={inputStyle(isTownCountry(town))}
+                    value={town}
+                    onChangeText={(t) => setTown(sanitizeTownCountry(t))}
+                    placeholder="Town"
+                    placeholderTextColor={Colors.placeholder}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.buttonContainer}>
+                <CustomButton
+                  title="SAVE CHANGES"
+                  iconName="save-outline"
+                  loading={saving}
+                  onPress={handleSave}
+                  loadingText="Saving…"
+                />
+                {!isFormValid() && showErrors && (
+                  <Text style={{ color: '#D32F2F', marginTop: 10, textAlign: 'center' }}>
+                    Please fix the highlighted fields.
+                  </Text>
+                )}
+              </View>
+            </View>
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
+
+      <CustomPopUp
+        visible={popupVisible}
+        title={popupTitle}
+        message={popupMessage}
+        confirmText="Great!"
+        showCancel={false}
+        maskClosable={false}
+        onConfirm={() => {
+          setPopupVisible(false);
+          if (popupIsSuccess) {
+            // Go back to profile tab
+            router.replace('/profile');
+          }
+        }}
+      />
+    </View>
   );
 }
 
-// ===== STYLES =====
 const styles = StyleSheet.create({
   container: { padding: 16 },
-
   formContainer: {
     backgroundColor: Colors.white,
     borderRadius: 8,
@@ -314,15 +300,12 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 10,
   },
-
   field: { marginBottom: 16 },
-
   label: {
     marginBottom: 6,
     fontWeight: '600',
     color: Colors.text,
   },
-
   input: {
     borderWidth: 1,
     borderColor: '#ccc',
@@ -333,30 +316,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     color: Colors.text,
   },
-
   inputError: { borderColor: '#D32F2F' },
-
   inputDisabled: {
     backgroundColor: '#F2F4F7',
     borderColor: '#E5E7EB',
     color: '#9CA3AF',
   },
-
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-
+  row: { flexDirection: 'row', justifyContent: 'space-between' },
   half: { flex: 0.48 },
-
-  buttonContainer: {
-    marginTop: 24,
-    alignItems: 'center',
-  },
-
-  errorText: {
-    color: '#D32F2F',
-    fontSize: 12,
-    marginTop: 4,
-  },
+  buttonContainer: { marginTop: 24, alignItems: 'center' },
 });

@@ -418,7 +418,7 @@ export default function CheckoutScreen() {
 			const response = await confirmOrder(newPayload);
 			if (typeof response === 'string' && response.includes('MySQL server has gone away')) {
 				setVerificationCodePopupVisible(false);
-				alert('Something went wrong. Please try again.');
+				alert('Server connection error. Please try again.');
 				return;
 			}
 			if (response.status === 'Success') {
@@ -579,19 +579,15 @@ export default function CheckoutScreen() {
 
 			console.log('confirmOrder response.......', response);
 
-			if (response.status === 'MySQL server has gone away477' && Object.keys(storeItemList).length > 0) {
+			if (response === 'MySQL server has gone away477' && Object.keys(storeItemList).length > 0) {
 				alert('Order confirmation failed. Please try again.');
 			}
 
-			if (response.status === 'Failure') {
+			if (response.status === 'Failure' || response.status === 'failed' || response.status === 'Failed' || response.status === 'failure') {
 				alert(response.msg || 'Order failed. Please try again later.');
 			}
 
 			if (response.status === 'Success') {
-				alert(response.msg || 'Order failed. Please try again later.');
-			}
-
-			if (response.status && response.status.toUpperCase() === 'SUCCESS') {
 				if (selectedPaymentSettingID != 0 && paymentMethod === 'Card') {
 					await paymentGatewayHandler(response);
 				} else {
@@ -600,7 +596,8 @@ export default function CheckoutScreen() {
 			} else if (response.status === 'sms_sent') {
 				setVerificationCodePopupVisible(true);
 				setLastOrderPayload({ ...payload });
-				setVerificationCode(response.code);
+				console.log("order submit otp", response.code)
+				setVerificationCode(response.code || '');
 			} else if (response.status === 'Failed' && Object.keys(storeItemList).length > 0) {
 				setErrorMessage('Order failed. Please try again later.');
 				setErrorPopupVisible(true);
@@ -712,6 +709,13 @@ export default function CheckoutScreen() {
 				status: 1,
 				message: response.msg,
 				transactionId: response.transaction_id,
+				//new added for NAN issues resovle
+				items: JSON.stringify(itemList),
+				discount: discountVal.toFixed(2),
+				carrybag: carryBagTotal.toFixed(2),
+				delivery: deliveryCharge.toFixed(2),
+				total: finalTotalWithCarryBag.toFixed(2),
+
 			},
 		});
 	}

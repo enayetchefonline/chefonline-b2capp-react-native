@@ -323,7 +323,7 @@ export default function CartScreen() {
     }
   };
 
-  // ✅ Save button: call API, update Redux, show popup
+  // ✅ Save button: call API, update Redux, AND persist to AsyncStorage
   const handleSavePhone = async () => {
     const trimmed = (phoneInput || '').trim();
 
@@ -336,40 +336,59 @@ export default function CartScreen() {
       const response = await callCheckUserPhone(trimmed);
 
       if (response?.status === 'success') {
-        // update user in Redux
+        // 1) Build updated user
+        const updatedUser = {
+          ...authUser,
+          mobile_no: trimmed,
+          mobile_verify_status: '0', // still not verified until OTP
+        };
+
+        // 2) Update Redux store
         dispatch(
           setUser({
-            user: {
-              ...authUser,
-              mobile_no: trimmed,
-              mobile_verify_status: '0', // still not verified until OTP
-            },
+            user: updatedUser,
             token: authToken,
             ip: authIp || ipAddress,
           })
         );
 
-        // close phone modal
+        // 3) Persist to AsyncStorage so future screens use the new mobile_no
+        try {
+          await AsyncStorage.setItem('userData', JSON.stringify(updatedUser));
+          if (authToken) {
+            await AsyncStorage.setItem('accessToken', authToken);
+          }
+        } catch (storageErr) {
+          console.log('Failed to save updated user to AsyncStorage', storageErr);
+        }
+
+        // 4) Close phone modal
         setNumberVrificationModalVisible(false);
 
-        // show success popup
-        setPhoneStatusPopupTitle('Verification Code Sent');
-        setPhoneStatusPopupMessage(response.msg || 'OTP has been sent to your mobile number.');
+        // 5) Show success popup
+        setPhoneStatusPopupTitle('Success');
+        setPhoneStatusPopupMessage(
+          response.msg || 'OTP has been sent to your mobile number.'
+        );
         setPhoneStatusPopupVisible(true);
 
-        // you can open OTP modal here later if needed
+        // If later you want to show OTP modal:
         // setNumberVrificationOTPModalVisible(true);
       } else {
         setPhoneStatusPopupTitle('Error');
-        setPhoneStatusPopupMessage(response?.msg || 'Failed to verify number. Please try again.');
+        setPhoneStatusPopupMessage(
+          response?.msg || 'Failed to verify number. Please try again.'
+        );
         setPhoneStatusPopupVisible(true);
       }
     } catch (error) {
+      console.error('handleSavePhone error', error);
       setPhoneStatusPopupTitle('Error');
       setPhoneStatusPopupMessage('Something went wrong. Please try again.');
       setPhoneStatusPopupVisible(true);
     }
   };
+
 
   return (
     <View style={styles.container}>
