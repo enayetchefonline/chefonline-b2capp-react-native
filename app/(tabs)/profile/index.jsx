@@ -2,7 +2,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
 
@@ -35,7 +42,6 @@ export default function ProfileScreen() {
   // ✅ Only hydrate from AsyncStorage if Redux has no user yet
   useEffect(() => {
     const loadUserData = async () => {
-      // If user already exists in Redux (e.g., after edit), just stop loading
       if (user) {
         setLoading(false);
         return;
@@ -60,6 +66,8 @@ export default function ProfileScreen() {
   // OTP countdown timer
   useEffect(() => {
     if (!showOtpModal) return;
+
+    setOtpSecondsLeft(180); // reset when modal opens
 
     const interval = setInterval(() => {
       setOtpSecondsLeft((prev) => {
@@ -109,7 +117,6 @@ export default function ProfileScreen() {
       if (response?.status === 'success') {
         setShowDeleteConfirmModal(false);
         setOtpCode('');
-        setOtpSecondsLeft(180);
         setShowOtpModal(true);
       } else {
         setShowDeleteConfirmModal(false);
@@ -201,6 +208,9 @@ export default function ProfileScreen() {
   const canDelete = deleteConfirmText.trim() === 'DELETE';
   const canVerifyOtp = otpCode.trim().length > 0 && otpSecondsLeft > 0 && !otpLoading;
 
+  // ⭐ decide verified vs not verified based on mobile_verify_status
+  const isVerified = user?.mobile_verify_status === '1';
+
   return (
     <View style={styles.container}>
       <View style={styles.profileContainer}>
@@ -211,9 +221,29 @@ export default function ProfileScreen() {
             color={Colors.primary}
             style={styles.profileIcon}
           />
-          <Text style={styles.nameText}>
-            {user.first_name || ''} {user.last_name || ''}
-          </Text>
+
+          {/* ⭐ Name + verification icon row */}
+          <View style={styles.nameRow}>
+            <Text style={styles.nameText}>
+              {user.first_name || ''} {user.last_name || ''}
+            </Text>
+            {isVerified ? (
+              <Ionicons
+                name="checkmark-circle"
+                size={20}
+                color="#16A34A" // green
+                style={styles.statusIcon}
+              />
+            ) : (
+              <Ionicons
+                name="alert-circle-outline"
+                size={20}
+                color="#DC2626" // red
+                style={styles.statusIcon}
+              />
+            )}
+          </View>
+
           <Text style={styles.infoText}>{user.email}</Text>
           <Text style={styles.infoText}>{user.mobile_no}</Text>
           <Text style={styles.infoText}>{user.postcode ?? 'Postcode not available'}</Text>
@@ -245,9 +275,125 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {/* Modals (same as your code) */}
-      {/* ... keep your delete / otp / dialog modals unchanged ... */}
-      {/* (I won't rewrite them again here since logic is same) */}
+      {/* 🔹 Delete Confirm Overlay */}
+      {showDeleteConfirmModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Delete Profile</Text>
+            <Text style={styles.modalMessage}>
+              Type <Text style={{ fontWeight: 'bold' }}>DELETE</Text> to confirm profile deletion.
+            </Text>
+            <TextInput
+              style={styles.modalInput}
+              value={deleteConfirmText}
+              onChangeText={setDeleteConfirmText}
+              placeholder="Type DELETE here"
+              placeholderTextColor="#9CA3AF"
+              autoCapitalize="characters"
+            />
+
+            <View style={styles.modalButtonRow}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => {
+                  setShowDeleteConfirmModal(false);
+                  setDeleteConfirmText('');
+                }}
+                disabled={deleteLoading}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  styles.modalConfirmButton,
+                  !canDelete && { opacity: 0.5 },
+                ]}
+                onPress={handleConfirmDelete}
+                disabled={!canDelete || deleteLoading}
+              >
+                {deleteLoading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.modalConfirmText}>Confirm</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* 🔹 OTP Modal */}
+      {showOtpModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Verify Deletion</Text>
+            <Text style={styles.modalMessage}>
+              An OTP has been sent to your registered mobile number. Enter the code to confirm
+              profile deletion.
+            </Text>
+
+            <Text style={styles.timerText}>Time left: {formatTime(otpSecondsLeft)}</Text>
+
+            <TextInput
+              style={styles.modalInput}
+              value={otpCode}
+              onChangeText={setOtpCode}
+              placeholder="Enter OTP"
+              placeholderTextColor="#9CA3AF"
+              keyboardType="numeric"
+              maxLength={6}
+            />
+
+            <View style={styles.modalButtonRow}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => {
+                  setShowOtpModal(false);
+                  setOtpCode('');
+                }}
+                disabled={otpLoading}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  styles.modalConfirmButton,
+                  !canVerifyOtp && { opacity: 0.5 },
+                ]}
+                onPress={handleVerifyOtp}
+                disabled={!canVerifyOtp}
+              >
+                {otpLoading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.modalConfirmText}>Verify</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* 🔹 Dialog (success / error) */}
+      {dialog.visible && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>{dialog.isError ? 'Error' : 'Message'}</Text>
+            <Text style={styles.modalMessage}>{dialog.message}</Text>
+
+            <View style={[styles.modalButtonRow, { justifyContent: 'center' }]}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalConfirmButton]}
+                onPress={handleDialogOk}
+              >
+                <Text style={styles.modalConfirmText}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -275,7 +421,19 @@ const styles = StyleSheet.create({
   },
   profileMain: { alignItems: 'center', marginVertical: 30 },
   profileIcon: { marginBottom: 20 },
-  nameText: { fontSize: 18, fontWeight: '600', color: Colors.text, marginBottom: 6 },
+
+  // ⭐ new: name row + status icon
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  statusIcon: {
+    marginLeft: 4,
+  },
+
+  nameText: { fontSize: 18, fontWeight: '600', color: Colors.text },
   infoText: { fontSize: 14, color: Colors.text, marginBottom: 4 },
   buttonGrid: {
     width: '100%',
@@ -284,11 +442,71 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
   },
+
+  // Overlays / modals
   modalOverlay: {
-    flex: 1,
+    position: 'absolute',
+    inset: 0,
     backgroundColor: 'rgba(0,0,0,0.35)',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 24,
   },
-  // ... keep your existing modal styles ...
+  modalContent: {
+    width: '100%',
+    backgroundColor: Colors.white,
+    borderRadius: 8,
+    padding: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 8,
+  },
+  modalMessage: {
+    fontSize: 14,
+    color: Colors.text,
+    marginBottom: 12,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: 12,
+    color: Colors.text,
+  },
+  modalButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 4,
+    gap: 8,
+  },
+  modalButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+  },
+  modalCancelButton: {
+    backgroundColor: '#E5E7EB',
+  },
+  modalConfirmButton: {
+    backgroundColor: Colors.primary,
+  },
+  modalCancelText: {
+    fontSize: 14,
+    color: '#374151',
+  },
+  modalConfirmText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  timerText: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 6,
+  },
 });

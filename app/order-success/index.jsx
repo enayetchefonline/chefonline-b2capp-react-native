@@ -7,15 +7,17 @@ import { clearCart } from '../../store/slices/cartSlice';
 export default function OrderSuccessScreen() {
 	const router = useRouter();
 	const dispatch = useDispatch();
-	const { status, transactionId, discount, carrybag, delivery, total } = useLocalSearchParams();
+	const { status, transactionId, discount, carrybag, delivery, total, message } = useLocalSearchParams();
 	const storeItemList = useSelector((state) => state.cart.items);
 	const restaurantName = useSelector((state) => state.cart.restaurantName);
 	const restaurantDetails = useSelector((state) => state.restaurantDetail.data);
 
+	console.log("status", status)
+
 	// 👉 for responsive heights
 	const { height: screenHeight } = useWindowDimensions();
 
-	const isSuccess = status === 1 || status?.toLowerCase?.() === 'success';
+	const isSuccess = status === 1 || status === 'Success';
 
 	const handleBackToHome = () => {
 		if (isSuccess) {
@@ -45,7 +47,11 @@ export default function OrderSuccessScreen() {
 						Thank you for your order with <Text style={styles.highlight}>{restaurantName}</Text>
 					</Text>
 				) : (
+					<>
 					<Text style={styles.title}>Please wait for 3 minutes to place a new order.</Text>
+					<Text style={styles.message}>{message}</Text>
+					</>
+					
 				)}
 
 				{isSuccess ? (
@@ -152,6 +158,12 @@ const styles = StyleSheet.create({
 		fontWeight: '600',
 		textAlign: 'center',
 		marginTop: 12,
+	},
+	message: {
+		fontSize: 14,
+		color: '#666',
+		textAlign: 'center',
+		marginTop: 8,
 	},
 	highlight: {
 		fontStyle: 'italic',

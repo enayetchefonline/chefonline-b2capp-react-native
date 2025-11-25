@@ -706,7 +706,7 @@ export default function CheckoutScreen() {
 			pathname: '/order-success',
 			params: {
 				orderId: response.order_ID,
-				status: 1,
+				status: response.status,
 				message: response.msg,
 				transactionId: response.transaction_id,
 				//new added for NAN issues resovle

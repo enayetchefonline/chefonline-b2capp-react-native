@@ -9,7 +9,7 @@ import CustomPopUp from '../../../components/ui/CustomPopUp';
 
 // API and Redux actions
 import { useIpAddress } from '../../../hooks/useIpAddress';
-import { carrierBag, checkUserPhone } from '../../../lib/api';
+import { carrierBag, checkUserPhone, userPhoneVerify } from '../../../lib/api';
 import {
   addItemToCart,
   setCarryBag,
@@ -28,7 +28,7 @@ const COLORS = {
   border: '#E0E0E0',
   white: '#FFFFFF',
   primary: '#EC1839', // Strong red
-  secondary: '#333333', // Use as needed for proceed btn bg
+  secondary: '#333333',
   shadow: '#000000',
   secondaryText: '#ccc',
 };
@@ -64,17 +64,22 @@ export default function CartScreen() {
   const [phoneInput, setPhoneInput] = useState(authUser?.mobile_no || '');
   const [phoneError, setPhoneError] = useState('');
 
-  // 🔔 Phone verify status popup
+  // 🔔 Phone / OTP status popup
   const [phoneStatusPopupVisible, setPhoneStatusPopupVisible] = useState(false);
   const [phoneStatusPopupTitle, setPhoneStatusPopupTitle] = useState('');
   const [phoneStatusPopupMessage, setPhoneStatusPopupMessage] = useState('');
+
+  // ⭐ OTP modal state
+  const [otpInput, setOtpInput] = useState('');
+  const [otpError, setOtpError] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
 
   // IP address via reusable hook
   const { ipAddress } = useIpAddress();
 
   const isUserHasNumber = authUser?.mobile_no && authUser?.mobile_no !== '';
 
-  console.log('isUserHasNumber', isUserHasNumber);
+  // console.log('isUserHasNumber', isUserHasNumber);
 
   const availableModes = (storeOrderPolicy?.policy || []).map((p) => p.policy_name);
 
@@ -173,7 +178,6 @@ export default function CartScreen() {
     if (!storeSelectedDiscountId && !storeSelectedOfferId) {
       const totalOptions = applicableDiscountsLocal.length + applicableOffersLocal.length;
 
-      // If policy have only discount / only offer (total 1 option) → auto select
       if (totalOptions === 1) {
         if (applicableDiscountsLocal.length === 1) {
           const onlyDiscount = applicableDiscountsLocal[0];
@@ -183,7 +187,6 @@ export default function CartScreen() {
           dispatch(setSelectedRestaurantOfferId(onlyOffer.id));
         }
       }
-      // If multiple options (multiple discounts/offers) → user must select, do nothing
     }
   }, [
     availableModes,
@@ -227,7 +230,208 @@ export default function CartScreen() {
     return parseFloat(currentPolicy?.min_order || '0');
   };
 
-  const handleProceed = async () => {
+  // 🔢 Phone validation helpers (for modal only)
+  const ukMobileRegex = /^07\d{9}$/;
+  const isPhoneValid = ukMobileRegex.test((phoneInput || '').trim());
+
+  // ✅ callCheckUserPhone – calls API with proper payload + returns response
+  const callCheckUserPhone = async (phone) => {
+    try {
+      const payload = {
+        user_id: authUser?.userid,
+        ip_address: ipAddress, // from useIpAddress hook
+        phone_no: phone,
+      };
+
+      const response = await checkUserPhone(payload);
+      // console.log('response checkUserPhone', response);
+      return response;
+    } catch (error) {
+      console.error('checkUserPhone error:', error);
+      throw error;
+    }
+  };
+
+  // ⭐ Helper: which phone to use for OTP
+  const getPhoneForOtp = () => {
+    const fromUser = authUser?.mobile_no;
+    const fromInput = phoneInput;
+    return (fromUser || fromInput || '').trim();
+  };
+
+  // ✅ Only validate while typing (no API here)
+  const handlePhoneChange = (text) => {
+    const cleaned = text.replace(/\D/g, ''); // keep digits only
+    setPhoneInput(cleaned);
+
+    if (cleaned && !ukMobileRegex.test(cleaned)) {
+      setPhoneError('Enter a valid UK mobile number (e.g., 07123456789)');
+    } else {
+      setPhoneError('');
+    }
+  };
+
+  // ✅ Save button: call API, update Redux, AND persist to AsyncStorage
+  const handleSavePhone = async () => {
+    const trimmed = (phoneInput || '').trim();
+
+    if (!ukMobileRegex.test(trimmed)) {
+      setPhoneError('Enter a valid UK mobile number (e.g., 07123456789)');
+      return;
+    }
+
+    try {
+      // 1) Send OTP + register number on backend
+      const response = await callCheckUserPhone(trimmed);
+
+      if (response?.status === 'success') {
+        // 2) Build updated user (still unverified)
+        const updatedUser = {
+          ...authUser,
+          mobile_no: trimmed,
+          mobile_verify_status: '0',
+        };
+
+        // 3) Update Redux store
+        dispatch(
+          setUser({
+            user: updatedUser,
+            token: authToken,
+            ip: authIp || ipAddress,
+          })
+        );
+
+        // 4) Persist to AsyncStorage
+        try {
+          await AsyncStorage.setItem('userData', JSON.stringify(updatedUser));
+          if (authToken) {
+            await AsyncStorage.setItem('accessToken', authToken);
+          }
+        } catch (storageErr) {
+          console.log('Failed to save updated user to AsyncStorage', storageErr);
+        }
+
+        // 5) Close phone modal and open OTP modal
+        setNumberVrificationModalVisible(false);
+        setOtpInput('');
+        setOtpError('');
+        setNumberVrificationOTPModalVisible(true);
+      } else {
+        const msg =
+          response?.msg ||
+          'Failed to verify number. Please try again.';
+
+        // Special handling: max OTP request limit reached
+        if (
+          msg.toLowerCase().includes('maximum number of otp requests')
+        ) {
+          // Close phone modal, show info popup
+          setNumberVrificationModalVisible(false);
+        }
+
+        setPhoneStatusPopupTitle('Error');
+        setPhoneStatusPopupMessage(msg);
+        setPhoneStatusPopupVisible(true);
+      }
+    } catch (error) {
+      console.error('handleSavePhone error', error);
+      setPhoneStatusPopupTitle('Error');
+      setPhoneStatusPopupMessage('Something went wrong. Please try again.');
+      setPhoneStatusPopupVisible(true);
+    }
+  };
+
+  // ⭐ OTP verify handler
+  const handleVerifyOtp = async () => {
+    const trimmedOtp = (otpInput || '').trim();
+
+    if (!trimmedOtp) {
+      setOtpError('Please enter the OTP you received.');
+      return;
+    }
+
+    if (!/^\d{4,6}$/.test(trimmedOtp)) {
+      setOtpError('Enter a valid OTP (4–6 digits).');
+      return;
+    }
+
+    if (!authUser?.userid) {
+      setOtpError('User info missing. Please login again.');
+      return;
+    }
+
+    const phoneNo = getPhoneForOtp();
+    if (!phoneNo) {
+      setOtpError('Phone number missing. Please try again.');
+      return;
+    }
+
+    try {
+      setOtpLoading(true);
+
+      const resp = await userPhoneVerify({
+        user_id: authUser.userid,
+        ip_address: ipAddress,
+        phone_no: phoneNo,
+        otp: trimmedOtp,
+      });
+
+      // console.log('userPhoneVerify response', resp);
+
+      if (resp?.status === 'success') {
+        // ✅ Mark user as verified
+        const updatedUser = {
+          ...authUser,
+          mobile_no: phoneNo,
+          mobile_verify_status: '1',
+          mobile_verify_date: new Date().toISOString(),
+        };
+
+        // 🔥 Update Redux store
+        dispatch(
+          setUser({
+            user: updatedUser,
+            token: authToken,
+            ip: authIp || ipAddress,
+          })
+        );
+
+        // keep local phone input in sync
+        setPhoneInput(phoneNo);
+
+        // 🔥 Persist to AsyncStorage
+        try {
+          await AsyncStorage.setItem('userData', JSON.stringify(updatedUser));
+          if (authToken) {
+            await AsyncStorage.setItem('accessToken', authToken);
+          }
+        } catch (storageErr) {
+          console.log('Failed to persist verified user', storageErr);
+        }
+
+        setNumberVrificationOTPModalVisible(false);
+        setOtpInput('');
+        setOtpError('');
+
+        setSnackBarMessage(resp?.msg || 'Phone number verified successfully.');
+        setVisibleSnackBar(true);
+
+        // 👉 After successful verification, continue normal proceed flow
+        //    but SKIP phone/OTP checks (otherwise OTP modal will show again)
+        await handleProceed(true);
+      } else {
+        setOtpError(resp?.msg || 'Invalid OTP. Please try again.');
+      }
+    } catch (err) {
+      console.error('handleVerifyOtp error', err);
+      setOtpError('Something went wrong. Please try again.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  // ⭐ handleProceed with optional skipPhoneCheck flag
+  const handleProceed = async (skipPhoneCheck = false) => {
     try {
       const token = await AsyncStorage.getItem('accessToken');
       if (!token) {
@@ -238,11 +442,50 @@ export default function CartScreen() {
         return;
       }
 
-      // if no mobile number, open phone modal
-      if (!authUser?.mobile_no) {
-        setNumberVrificationModalVisible(true);
-        return;
+      // Only do phone / OTP logic if NOT skipping
+      if (!skipPhoneCheck) {
+        // CASE 1: User already has a number but not verified → show OTP modal
+        if (authUser?.mobile_no && authUser?.mobile_verify_status === '0') {
+          try {
+            const resp = await callCheckUserPhone(authUser.mobile_no);
+
+            if (resp?.status === 'success') {
+              setOtpInput('');
+              setOtpError('');
+              setNumberVrificationOTPModalVisible(true);
+            } else {
+              const msg =
+                resp?.msg ||
+                'Failed to send OTP. Please try again.';
+
+              // Special handling: max OTP request reached
+              if (
+                msg.toLowerCase().includes('maximum number of otp requests')
+              ) {
+                // Just show message, do not open OTP modal
+              }
+
+              setPhoneStatusPopupTitle('Error');
+              setPhoneStatusPopupMessage(msg);
+              setPhoneStatusPopupVisible(true);
+            }
+          } catch (e) {
+            console.log('Failed to send OTP for existing number', e);
+            setPhoneStatusPopupTitle('Error');
+            setPhoneStatusPopupMessage('Failed to send OTP. Please try again.');
+            setPhoneStatusPopupVisible(true);
+          }
+          return;
+        }
+
+        // CASE 2: User has no number at all → first phone modal, then OTP modal
+        if (!authUser?.mobile_no) {
+          setNumberVrificationModalVisible(true);
+          return;
+        }
       }
+
+      // From here: phone is verified OR we explicitly skipped phone check
 
       if (!mode) {
         setSnackBarMessage('Please select order type: Collection or Delivery');
@@ -289,106 +532,13 @@ export default function CartScreen() {
 
   const total = subtotal - discountAmount;
 
-  // 🔢 Phone validation helpers (for modal only, no change to existing cart logic)
-  const ukMobileRegex = /^07\d{9}$/;
-  const isPhoneValid = ukMobileRegex.test((phoneInput || '').trim());
-
-  // ✅ callCheckUserPhone – calls API with proper payload + returns response
-  const callCheckUserPhone = async (phone) => {
-    try {
-      const payload = {
-        user_id: authUser?.userid,
-        ip_address: ipAddress, // from useIpAddress hook
-        phone_no: phone,
-      };
-
-      const response = await checkUserPhone(payload);
-      console.log('response checkUserPhone', response);
-      return response;
-    } catch (error) {
-      console.error('checkUserPhone error:', error);
-      throw error;
-    }
-  };
-
-  // ✅ Only validate while typing (no API here)
-  const handlePhoneChange = (text) => {
-    const cleaned = text.replace(/\D/g, ''); // keep digits only
-    setPhoneInput(cleaned);
-
-    if (cleaned && !ukMobileRegex.test(cleaned)) {
-      setPhoneError('Enter a valid UK mobile number (e.g., 07123456789)');
-    } else {
-      setPhoneError('');
-    }
-  };
-
-  // ✅ Save button: call API, update Redux, AND persist to AsyncStorage
-  const handleSavePhone = async () => {
-    const trimmed = (phoneInput || '').trim();
-
-    if (!ukMobileRegex.test(trimmed)) {
-      setPhoneError('Enter a valid UK mobile number (e.g., 07123456789)');
-      return;
-    }
-
-    try {
-      const response = await callCheckUserPhone(trimmed);
-
-      if (response?.status === 'success') {
-        // 1) Build updated user
-        const updatedUser = {
-          ...authUser,
-          mobile_no: trimmed,
-          mobile_verify_status: '0', // still not verified until OTP
-        };
-
-        // 2) Update Redux store
-        dispatch(
-          setUser({
-            user: updatedUser,
-            token: authToken,
-            ip: authIp || ipAddress,
-          })
-        );
-
-        // 3) Persist to AsyncStorage so future screens use the new mobile_no
-        try {
-          await AsyncStorage.setItem('userData', JSON.stringify(updatedUser));
-          if (authToken) {
-            await AsyncStorage.setItem('accessToken', authToken);
-          }
-        } catch (storageErr) {
-          console.log('Failed to save updated user to AsyncStorage', storageErr);
-        }
-
-        // 4) Close phone modal
-        setNumberVrificationModalVisible(false);
-
-        // 5) Show success popup
-        setPhoneStatusPopupTitle('Success');
-        setPhoneStatusPopupMessage(
-          response.msg || 'OTP has been sent to your mobile number.'
-        );
-        setPhoneStatusPopupVisible(true);
-
-        // If later you want to show OTP modal:
-        // setNumberVrificationOTPModalVisible(true);
-      } else {
-        setPhoneStatusPopupTitle('Error');
-        setPhoneStatusPopupMessage(
-          response?.msg || 'Failed to verify number. Please try again.'
-        );
-        setPhoneStatusPopupVisible(true);
-      }
-    } catch (error) {
-      console.error('handleSavePhone error', error);
-      setPhoneStatusPopupTitle('Error');
-      setPhoneStatusPopupMessage('Something went wrong. Please try again.');
-      setPhoneStatusPopupVisible(true);
-    }
-  };
-
+  // For masking phone in OTP modal
+  const otpPhoneMasked = (() => {
+    const p = getPhoneForOtp();
+    if (!p) return '';
+    if (p.length <= 4) return p;
+    return p.replace(/(\d{3})\d+(\d{2})/, '$1******$2');
+  })();
 
   return (
     <View style={styles.container}>
@@ -422,7 +572,7 @@ export default function CartScreen() {
             <ScrollView
               nestedScrollEnabled
               showsVerticalScrollIndicator={false}
-              style={{ maxHeight: screenHeight * 0.5 }} // 👈 controls visible height
+              style={{ maxHeight: screenHeight * 0.5 }}
               contentContainerStyle={{ paddingBottom: 4 }}
             >
               {cartItems.map((item) => (
@@ -507,7 +657,7 @@ export default function CartScreen() {
             )}
             <Text style={styles.summaryText}>TOTAL: £{total.toFixed(2)}</Text>
           </View>
-          <TouchableOpacity style={styles.proceedTouchable} onPress={handleProceed}>
+          <TouchableOpacity style={styles.proceedTouchable} onPress={() => handleProceed()}>
             <Text style={styles.proceedText}>PROCEED</Text>
           </TouchableOpacity>
         </View>
@@ -537,7 +687,7 @@ export default function CartScreen() {
         }}
       />
 
-      {/* Phone verify status popup */}
+      {/* Phone / OTP status popup */}
       <CustomPopUp
         visible={phoneStatusPopupVisible}
         title={phoneStatusPopupTitle}
@@ -567,7 +717,7 @@ export default function CartScreen() {
         </Snackbar>
       </View>
 
-      {/* Phone Verification Modal */}
+      {/* Phone Number Modal */}
       <Modal
         visible={numberVrificationModalVisible}
         onDismiss={() => setNumberVrificationModalVisible(false)}
@@ -612,6 +762,61 @@ export default function CartScreen() {
           </TouchableOpacity>
         </View>
       </Modal>
+
+      {/* ⭐ OTP Modal */}
+      <Modal
+        visible={numberVrificationOTPModalVisible}
+        onDismiss={() => setNumberVrificationOTPModalVisible(false)}
+        contentContainerStyle={styles.phoneModalContainer}
+      >
+        <Text style={styles.phoneModalTitle}>Enter OTP</Text>
+        {otpPhoneMasked ? (
+          <Text style={{ fontSize: 12, color: COLORS.text, marginBottom: 8 }}>
+            We have sent a verification code to {otpPhoneMasked}
+          </Text>
+        ) : null}
+
+        <TextInput
+          style={styles.phoneInput}
+          placeholder="Enter OTP"
+          placeholderTextColor="#D1D5DB"
+          keyboardType="number-pad"
+          maxLength={6}
+          value={otpInput}
+          onChangeText={(text) => {
+            const cleaned = text.replace(/\D/g, '');
+            setOtpInput(cleaned);
+            setOtpError('');
+          }}
+        />
+
+        {otpError ? <Text style={styles.phoneError}>{otpError}</Text> : null}
+
+        <View style={styles.phoneButtonRow}>
+          <TouchableOpacity
+            style={[styles.phoneButton, styles.phoneCancelButton]}
+            onPress={() => {
+              setNumberVrificationOTPModalVisible(false);
+              setOtpInput('');
+              setOtpError('');
+            }}
+          >
+            <Text style={styles.phoneCancelText}>Cancel</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.phoneButton,
+              styles.phoneSaveButton,
+              (otpLoading || otpInput.length < 4) && { opacity: 0.5 },
+            ]}
+            onPress={handleVerifyOtp}
+            disabled={otpLoading || otpInput.length < 4}
+          >
+            <Text style={styles.phoneSaveText}>{otpLoading ? 'Verifying...' : 'Verify'}</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -630,7 +835,6 @@ const styles = StyleSheet.create({
   toggleText: { fontSize: 12, color: COLORS.text },
   toggleTextActive: { color: COLORS.white },
 
-  // listCard bg stays the same (white)
   listCard: {
     backgroundColor: COLORS.white,
     borderRadius: 8,
