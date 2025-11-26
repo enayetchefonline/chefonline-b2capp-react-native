@@ -1,16 +1,16 @@
-import {useRouter} from 'expo-router';
-import {useEffect, useState} from 'react';
-import {FlatList, Image, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import {useDispatch, useSelector} from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 
-import {ActivityIndicator} from 'react-native-paper';
+import { ActivityIndicator } from 'react-native-paper';
 import CustomPopUp from '../../../../components/ui/CustomPopUp';
-import {searchRestaurantsApi} from '../../../../lib/api';
-import {getCurrentApiDateTimeObj, getRestaurantScheduleStatus} from '../../../../lib/utils/restaurantSchedule';
-import {clearCart} from '../../../../store/slices/cartSlice';
-import {clearRestaurantDetail} from '../../../../store/slices/restaurantDetailSlice';
-import {setRestaurantList} from '../../../../store/slices/restaurantListSlice';
+import { searchRestaurantsApi } from '../../../../lib/api';
+import { getCurrentApiDateTimeObj, getRestaurantScheduleStatus } from '../../../../lib/utils/restaurantSchedule';
+import { clearCart } from '../../../../store/slices/cartSlice';
+import { clearRestaurantDetail } from '../../../../store/slices/restaurantDetailSlice';
+import { setRestaurantList } from '../../../../store/slices/restaurantListSlice';
 
 const COLORS = {
 	background: '#F9FAFB',
@@ -46,6 +46,8 @@ export default function RestaurantListScreen() {
 	const [showRedStickerPopup, setShowRedStickerPopup] = useState(false);
 	const [selectedRestaurantId, setSelectedRestaurantId] = useState(null);
 	const [showClosedPopup, setShowClosedPopup] = useState(false);
+
+	const storeOrderType = useSelector((state) => state.cart.orderType);
 
 	useEffect(() => {
 		setPageNo(2); // Reset to page 2 only, keep store list intact
@@ -104,8 +106,9 @@ export default function RestaurantListScreen() {
 		}
 
 		const scheduleList = restaurant?.restuarent_schedule?.schedule || [];
+		console.log("rest schedulelist", JSON.stringify(scheduleList))
 		const status = getRestaurantScheduleStatus(scheduleList, getCurrentApiDateTimeObj());
-		if (status === 'CLOSED') {
+		if (status === 'CLOSED' && storeOrderType !== 'reservation') {
 			setShowClosedPopup(true);
 			return;
 		}

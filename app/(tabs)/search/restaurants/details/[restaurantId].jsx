@@ -49,8 +49,13 @@ export default function RestaurantDetailScreen() {
 	const [loading, setLoading] = useState(true);
 
 	const cartItems = useSelector((state) => state.cart.items);
+	const storeOrderType = useSelector((state) => state.cart.orderType);
 
-	console.log("restaurantDetails:", JSON.stringify(restaurantDetails?.accept_reservation));
+	
+
+	// console.log("restaurantDetails:", JSON.stringify(restaurantDetails?.accept_reservation));
+	// console.log("restaurantScheduleStatus:", restaurantScheduleStatus);
+	// const isResturantClosed = restaurantScheduleStatus === 'CLOSED';
 
 	// Fetch payment options and restaurant details
 	useEffect(() => {
@@ -98,9 +103,11 @@ export default function RestaurantDetailScreen() {
 	const addToCart = (item) => {
 		dispatch(addItemToCart(item));
 	};
+
 	const updateQuantity = (itemId, newQuantity) => {
 		dispatch(updateItemQuantity({ itemId, quantity: newQuantity }));
 	};
+
 	const isItemInCart = (itemId) => cartItems.hasOwnProperty(itemId);
 	const getItemQuantity = (itemId) => cartItems[itemId]?.quantity || 0;
 
@@ -141,6 +148,20 @@ export default function RestaurantDetailScreen() {
 			dishes: matchedDishes,
 		};
 	});
+
+	const handleGoToCart = () => {
+
+		if (storeOrderType === 'reservation' && restaurantScheduleStatus === 'CLOSED') {
+			alert("Sorry we are closed today");
+			return;
+		} else {
+			// Proceed to cart
+			router.push('/cart');
+		}
+		
+		
+		
+	}
 
 	// --- UI Render Functions ---
 	const renderHeader = () => (
@@ -321,7 +342,7 @@ export default function RestaurantDetailScreen() {
 			</View>
 			<TouchableOpacity
 				style={styles.proceedTouchable}
-				onPress={() => router.push('/cart')}
+				onPress={handleGoToCart}
 				disabled={Object.keys(cartItems).length === 0}
 			>
 				<Text style={styles.proceedText}>Go to Cart</Text>

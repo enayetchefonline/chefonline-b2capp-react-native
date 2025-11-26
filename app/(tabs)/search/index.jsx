@@ -138,6 +138,8 @@ export default function SearchScreen() {
 			pageNo: 1,
 		};
 
+		// console.log("search result", data)
+
 		try {
 			const response = await searchRestaurantsApi(data);
 
