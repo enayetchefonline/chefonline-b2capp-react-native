@@ -1,14 +1,14 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-	KeyboardAvoidingView,
-	Platform,
-	ScrollView,
-	StyleSheet,
-	Text,
-	TextInput,
-	TouchableOpacity,
-	View,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import CustomPopUp from '../../../../components/ui/CustomPopUp';
@@ -35,6 +35,10 @@ export default function ConfirmNewPasswordScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // 🔴 field-level errors
+  const [newPasswordError, setNewPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
+
   const [popupVisible, setPopupVisible] = useState(false);
   const [popupTitle, setPopupTitle] = useState('');
   const [popupMessage, setPopupMessage] = useState('');
@@ -47,26 +51,62 @@ export default function ConfirmNewPasswordScreen() {
     setPopupVisible(true);
   };
 
+  // ===== VALIDATION HELPERS =====
+  const validatePassword = (value) => {
+    const raw = value || '';
+
+    if (!raw.trim()) return 'Password is required';
+    if (/\s/.test(raw)) return 'Spaces are not allowed in password';
+    if (raw.length < 6) return 'Password must be at least 6 characters';
+
+    return '';
+  };
+
+  const validateConfirmPassword = (value, newPwd) => {
+    const raw = value || '';
+
+    if (!raw.trim()) return 'Confirm password is required';
+    if (/\s/.test(raw)) return 'Spaces are not allowed in password';
+    if (raw.length < 6) return 'Password must be at least 6 characters';
+    if (raw !== (newPwd || '')) return 'Passwords do not match';
+
+    return '';
+  };
+
+  // ===== REAL-TIME HANDLERS =====
+  const handleNewPasswordChange = (text) => {
+    setNewPassword(text);
+    const err = validatePassword(text);
+    setNewPasswordError(err);
+
+    // re-validate confirm when new changes
+    setConfirmPasswordError(validateConfirmPassword(confirmPassword, text));
+  };
+
+  const handleConfirmPasswordChange = (text) => {
+    setConfirmPassword(text);
+    const err = validateConfirmPassword(text, newPassword);
+    setConfirmPasswordError(err);
+  };
+
+  // ===== SUBMIT =====
   const handleSubmit = async () => {
-    // 🔹 Trim to avoid passwords like "   "
+    const newErr = validatePassword(newPassword);
+    const confirmErr = validateConfirmPassword(confirmPassword, newPassword);
+
+    setNewPasswordError(newErr);
+    setConfirmPasswordError(confirmErr);
+
+    // ❗ If validation fails, just show inline errors – no popup
+    if (newErr || confirmErr) return;
+
     const trimmedNew = newPassword.trim();
-    const trimmedConfirm = confirmPassword.trim();
-
-    if (!trimmedNew || !trimmedConfirm) {
-      showPopup('Error', 'Please fill in both fields. Spaces are not allowed.');
-      return;
-    }
-
-    if (trimmedNew !== trimmedConfirm) {
-      showPopup('Error', 'Passwords do not match.');
-      return;
-    }
 
     try {
       const response = await updatePassword({
         user_id,
         email,
-        password: trimmedNew, // ✅ use trimmed password
+        password: trimmedNew,
       });
 
       if (response?.status === 'success') {
@@ -87,6 +127,9 @@ export default function ConfirmNewPasswordScreen() {
     }
   };
 
+  const hasNewError = !!newPasswordError;
+  const hasConfirmError = !!confirmPasswordError;
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -101,14 +144,20 @@ export default function ConfirmNewPasswordScreen() {
         <View style={styles.card}>
           <Text style={styles.label}>Enter your new password</Text>
 
-          <View style={styles.inputWrapper}>
+          {/* New Password */}
+          <View
+            style={[
+              styles.inputWrapper,
+              hasNewError && { borderColor: 'red' },
+            ]}
+          >
             <TextInput
               style={styles.input}
               placeholder="New Password"
               placeholderTextColor={Colors.placeholder}
               secureTextEntry={!showPassword}
               value={newPassword}
-              onChangeText={setNewPassword}
+              onChangeText={handleNewPasswordChange}
             />
             <TouchableOpacity
               onPress={() => setShowPassword(!showPassword)}
@@ -121,15 +170,24 @@ export default function ConfirmNewPasswordScreen() {
               />
             </TouchableOpacity>
           </View>
+          {hasNewError && (
+            <Text style={styles.errorText}>{newPasswordError}</Text>
+          )}
 
-          <View style={styles.inputWrapper}>
+          {/* Confirm Password */}
+          <View
+            style={[
+              styles.inputWrapper,
+              hasConfirmError && { borderColor: 'red' },
+            ]}
+          >
             <TextInput
               style={styles.input}
               placeholder="Confirm Password"
               placeholderTextColor={Colors.placeholder}
               secureTextEntry={!showConfirmPassword}
               value={confirmPassword}
-              onChangeText={setConfirmPassword}
+              onChangeText={handleConfirmPasswordChange}
             />
             <TouchableOpacity
               onPress={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -142,6 +200,9 @@ export default function ConfirmNewPasswordScreen() {
               />
             </TouchableOpacity>
           </View>
+          {hasConfirmError && (
+            <Text style={styles.errorText}>{confirmPasswordError}</Text>
+          )}
 
           <TouchableOpacity style={styles.button} onPress={handleSubmit}>
             <Text style={styles.buttonText}>Submit</Text>
@@ -193,7 +254,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 6,
-    marginBottom: 12,
+    marginBottom: 6,
     backgroundColor: '#fff',
   },
   input: {
@@ -210,11 +271,16 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 6,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 12,
   },
   buttonText: {
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginBottom: 8,
   },
 });

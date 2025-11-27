@@ -43,6 +43,10 @@ export default function EditProfileScreen() {
   const [showErrors, setShowErrors] = useState(false);
   const [popupIsSuccess, setPopupIsSuccess] = useState(false);
 
+  // 🔴 real-time name error messages
+  const [firstNameError, setFirstNameError] = useState('');
+  const [lastNameError, setLastNameError] = useState('');
+
   const router = useRouter();
   const dispatch = useDispatch();
 
@@ -75,9 +79,18 @@ export default function EditProfileScreen() {
   const isUKPostcode = (pc) =>
     /^(GIR 0AA|[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2})$/i.test((pc || '').toUpperCase().trim());
 
+  // 🔍 shared name validator with min-length
+  const validateNameValue = (val) => {
+    const trimmed = (val || '').trim();
+    if (!trimmed) return 'This field is required';
+    if (trimmed.length < 2) return 'Must be at least 2 characters';
+    if (!isName(trimmed)) return "Only letters, spaces, ' and - are allowed";
+    return '';
+  };
+
   const isFormValid = () =>
-    isName(firstName) &&
-    isName(lastName) &&
+    !validateNameValue(firstName) &&
+    !validateNameValue(lastName) &&
     isValidEmail(email) &&
     isValidUKMobile(phone) &&
     isAddress(address1) &&
@@ -175,29 +188,47 @@ export default function EditProfileScreen() {
                 <View style={[styles.field, styles.half]}>
                   <Label text="First Name" required />
                   <TextInput
-                    style={inputStyle(isName(firstName))}
+                    style={inputStyle(!validateNameValue(firstName))}
                     placeholder="First name"
                     value={firstName}
-                    onChangeText={(t) => setFirstName(sanitizeName(t))}
+                    onChangeText={(t) => {
+                      const sanitized = sanitizeName(t);
+                      setFirstName(sanitized);
+                      setFirstNameError(validateNameValue(sanitized)); // 🔴 real-time
+                    }}
                     placeholderTextColor={Colors.placeholder}
                   />
+                  {!!firstNameError && (
+                    <Text style={styles.errorText}>{firstNameError}</Text>
+                  )}
                 </View>
 
                 <View style={[styles.field, styles.half]}>
                   <Label text="Last Name" required />
                   <TextInput
-                    style={inputStyle(isName(lastName))}
+                    style={inputStyle(!validateNameValue(lastName))}
                     placeholder="Last name"
                     value={lastName}
-                    onChangeText={(t) => setLastName(sanitizeName(t))}
+                    onChangeText={(t) => {
+                      const sanitized = sanitizeName(t);
+                      setLastName(sanitized);
+                      setLastNameError(validateNameValue(sanitized)); // 🔴 real-time
+                    }}
                     placeholderTextColor={Colors.placeholder}
                   />
+                  {!!lastNameError && (
+                    <Text style={styles.errorText}>{lastNameError}</Text>
+                  )}
                 </View>
               </View>
 
               <View style={styles.field}>
                 <Label text="Email" required />
-                <TextInput style={[styles.input, styles.inputDisabled]} value={email} editable={false} />
+                <TextInput
+                  style={[styles.input, styles.inputDisabled]}
+                  value={email}
+                  editable={false}
+                />
               </View>
 
               <View style={styles.field}>
@@ -325,4 +356,9 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between' },
   half: { flex: 0.48 },
   buttonContainer: { marginTop: 24, alignItems: 'center' },
+  errorText: {
+    color: '#D32F2F',
+    fontSize: 12,
+    marginTop: 4,
+  },
 });

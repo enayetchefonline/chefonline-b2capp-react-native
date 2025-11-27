@@ -19,49 +19,106 @@ import { userRegisterApi } from './../../../../lib/api';
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ukMobileRegex = /^07\d{9}$/;
 
-// Only letters + apostrophe + hyphen, 1–50 chars
-const firstNameRegex = /^[a-zA-Z'-]{1,50}$/;
-const lastNameRegex = /^[a-zA-Z'-]{1,50}$/;
+// Only letters + apostrophe + hyphen, **min 2 chars**
+const firstNameRegex = /^[a-zA-Z'-]{2,50}$/;
+const lastNameRegex = /^[a-zA-Z'-]{2,50}$/;
+
+// ---- Field-level validators (for real-time + submit) ----
+const validateFirstNameValue = (value) => {
+	const trimmed = (value || '').trim();
+	if (!trimmed) return 'First name is required';
+	if (trimmed.length < 2) return 'First name must be at least 2 characters';
+	if (!firstNameRegex.test(trimmed))
+		return "First name can only contain letters, ' and - (no spaces or symbols).";
+	return '';
+};
+
+const validateLastNameValue = (value) => {
+	const trimmed = (value || '').trim();
+	if (!trimmed) return 'Last name is required';
+	if (trimmed.length < 2) return 'Last name must be at least 2 characters';
+	if (!lastNameRegex.test(trimmed))
+		return "Last name can only contain letters, ' and - (no spaces or symbols).";
+	return '';
+};
+
+const validateEmailValue = (value) => {
+	const trimmed = (value || '').trim();
+	if (!trimmed) return 'Email is required';
+	if (!emailRegex.test(trimmed)) return 'Invalid email format';
+	return '';
+};
+
+const validateMobileValue = (value) => {
+	const trimmed = (value || '').trim();
+	if (!trimmed) return 'Mobile number is required';
+	if (!ukMobileRegex.test(trimmed))
+		return 'Enter a valid UK mobile number (11 digits, starts with 07)';
+	return '';
+};
+
+const validatePasswordValue = (value) => {
+  const raw = value || '';
+
+  // ❗ No space allowed in password
+  if (/\s/.test(raw)) return 'Spaces are not allowed in password';
+
+  const trimmed = raw.trim();
+  if (!trimmed) return 'Password is required';
+  if (trimmed.length < 6) return 'Password must be at least 6 characters';
+
+  return '';
+};
+
+
+const validateConfirmPasswordValue = (confirmValue, passwordValue) => {
+  const rawConfirm = confirmValue || '';
+
+  // ❗ No space allowed in confirm password
+  if (/\s/.test(rawConfirm)) return 'Spaces are not allowed in confirm password';
+
+  const trimmedConfirm = rawConfirm.trim();
+  const trimmedPassword = (passwordValue || '').trim();
+
+  if (!trimmedConfirm) return 'Confirm password is required';
+  if (trimmedPassword !== trimmedConfirm) return 'Passwords do not match';
+
+  return '';
+};
+
+
 
 function validateForm(form, skipPolicy = false) {
 	const errors = {};
-	const firstNameTrimmed = (form.firstName || '').trim();
-	const lastNameTrimmed = (form.lastName || '').trim();
-	const emailTrimmed = (form.email || '').trim();
-	const mobileTrimmed = (form.mobile || '').trim();
 
 	// First name
-	if (!firstNameTrimmed) {
-		errors.firstName = 'First name is required';
-	} else if (!firstNameRegex.test(firstNameTrimmed)) {
-		errors.firstName = "First name can only contain letters, ' and - (no spaces or symbols).";
-	}
+	const fnError = validateFirstNameValue(form.firstName);
+	if (fnError) errors.firstName = fnError;
 
 	// Last name
-	if (!lastNameTrimmed) {
-		errors.lastName = 'Last name is required';
-	} else if (!lastNameRegex.test(lastNameTrimmed)) {
-		errors.lastName = "Last name can only contain letters, ' and - (no spaces or symbols).";
-	}
+	const lnError = validateLastNameValue(form.lastName);
+	if (lnError) errors.lastName = lnError;
 
 	// Email
-	if (!emailTrimmed) errors.email = 'Email is required';
-	else if (!emailRegex.test(emailTrimmed)) errors.email = 'Invalid email format';
+	const emailError = validateEmailValue(form.email);
+	if (emailError) errors.email = emailError;
 
 	// Mobile
-	if (!mobileTrimmed) errors.mobile = 'Mobile number is required';
-	else if (!ukMobileRegex.test(mobileTrimmed)) {
-		errors.mobile = 'Enter a valid UK mobile number (11 digits, starts with 07)';
-	}
+	const mobileError = validateMobileValue(form.mobile);
+	if (mobileError) errors.mobile = mobileError;
 
 	// Password
-	if (!form.password) errors.password = 'Password is required';
-	if (!form.confirmPassword) errors.confirmPassword = 'Confirm password is required';
-	else if (form.password !== form.confirmPassword) errors.confirmPassword = 'Passwords do not match';
+	const pwdError = validatePasswordValue(form.password);
+	if (pwdError) errors.password = pwdError;
+
+	// Confirm Password
+	const cpError = validateConfirmPasswordValue(form.confirmPassword, form.password);
+	if (cpError) errors.confirmPassword = cpError;
 
 	// Policy
-	if (!skipPolicy && !form.agreePolicy)
+	if (!skipPolicy && !form.agreePolicy) {
 		errors.agreePolicy = 'You must agree to the terms and policies';
+	}
 
 	return errors;
 }
@@ -90,37 +147,87 @@ export default function RegisterScreen() {
 	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
 	const handleChange = (key, value) => {
-		// Optional: trim only on submit, but keep raw while typing
-		setForm((prev) => ({ ...prev, [key]: value }));
-		setFieldErrors((prev) => ({ ...prev, [key]: undefined }));
+		setForm((prev) => {
+			const updated = { ...prev, [key]: value };
+
+			// 🔹 Real-time validation per field
+			setFieldErrors((prevErrors) => {
+				const nextErrors = { ...prevErrors };
+
+				if (key === 'firstName') {
+					const err = validateFirstNameValue(value);
+					nextErrors.firstName = err || undefined;
+				} else if (key === 'lastName') {
+					const err = validateLastNameValue(value);
+					nextErrors.lastName = err || undefined;
+				} else if (key === 'email') {
+					const err = validateEmailValue(value);
+					nextErrors.email = err || undefined;
+				} else if (key === 'mobile') {
+					const err = validateMobileValue(value);
+					nextErrors.mobile = err || undefined;
+				} else if (key === 'password') {
+					const pwdErr = validatePasswordValue(value);
+					nextErrors.password = pwdErr || undefined;
+
+					// also re-validate confirmPassword since it depends on password
+					const confirmErr = validateConfirmPasswordValue(
+						updated.confirmPassword,
+						value
+					);
+					nextErrors.confirmPassword = confirmErr || undefined;
+				} else if (key === 'confirmPassword') {
+					const err = validateConfirmPasswordValue(value, updated.password);
+					nextErrors.confirmPassword = err || undefined;
+				} else if (key === 'agreePolicy') {
+					// clear policy error when toggled true
+					if (value) nextErrors.agreePolicy = undefined;
+				}
+
+				return nextErrors;
+			});
+
+			return updated;
+		});
 	};
 
-	// Disable button unless everything *looks* valid
-const isFormValid = useMemo(() => {
-	const firstNameTrimmed = (form.firstName || '').trim();
-	const lastNameTrimmed = (form.lastName || '').trim();
-	const emailTrimmed = (form.email || '').trim();
-	const mobileTrimmed = (form.mobile || '').trim();
+	// Disable button unless form looks valid + no current errors
+	const isFormValid = useMemo(() => {
+		const firstNameTrimmed = (form.firstName || '').trim();
+		const lastNameTrimmed = (form.lastName || '').trim();
+		const emailTrimmed = (form.email || '').trim();
+		const mobileTrimmed = (form.mobile || '').trim();
 
-	// Only check REQUIRED fields are filled
-	if (!firstNameTrimmed) return false;
-	if (!lastNameTrimmed) return false;
-	if (!emailTrimmed) return false;
-	if (!mobileTrimmed) return false;
-	if (!form.password) return false;
-	if (!form.confirmPassword) return false;
-	if (!form.agreePolicy) return false;
+		if (!firstNameTrimmed) return false;
+		if (!lastNameTrimmed) return false;
+		if (!emailTrimmed) return false;
+		if (!mobileTrimmed) return false;
+		if (!form.password) return false;
+		if (!form.confirmPassword) return false;
+		if (!form.agreePolicy) return false;
 
-	return true; // enable button
-}, [form]);
+		// Make sure there are no active error messages
+		const hasError = Object.values(fieldErrors).some((e) => !!e);
+		if (hasError) return false;
 
+		// Also run basic inline rules (defensive)
+		if (validateFirstNameValue(form.firstName)) return false;
+		if (validateLastNameValue(form.lastName)) return false;
+		if (validateEmailValue(form.email)) return false;
+		if (validateMobileValue(form.mobile)) return false;
+		if (validatePasswordValue(form.password)) return false;
+		if (validateConfirmPasswordValue(form.confirmPassword, form.password)) return false;
+
+		return true;
+	}, [form, fieldErrors]);
 
 	const handleSubmit = async () => {
+		// Full validation on submit
 		const errors = validateForm(form, false);
 		setFieldErrors(errors);
 
 		if (Object.keys(errors).length > 0) {
-			// Only set field errors, no popup
+			// Only show field errors, no popup
 			return;
 		}
 
@@ -137,7 +244,7 @@ const isFormValid = useMemo(() => {
 			address2: '',
 			city: '',
 			country: '',
-			password: form.password,
+			password: form.password.trim(),
 			dob_date: '',
 			doa: '',
 			ip_address: '',
@@ -145,6 +252,8 @@ const isFormValid = useMemo(() => {
 			want_newslatter: form.emailConsent,
 			want_text_message: form.smsConsent,
 		};
+
+		console.log("clg.......register", payload)
 
 		try {
 			const response = await userRegisterApi(payload);

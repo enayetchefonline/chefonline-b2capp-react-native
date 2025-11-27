@@ -50,6 +50,10 @@ export default function ReservationScreen() {
 	const [timeSheetVisible, setTimeSheetVisible] = useState(false);
 	const [titleSheetVisible, setTitleSheetVisible] = useState(false);
 
+	// 🔴 real-time name errors
+	const [firstNameError, setFirstNameError] = useState('');
+	const [lastNameError, setLastNameError] = useState('');
+
 	const todayStart = useMemo(() => {
 		const d = new Date();
 		d.setHours(0, 0, 0, 0);
@@ -65,12 +69,19 @@ export default function ReservationScreen() {
 		return /^[A-Za-z. ]{1,10}$/.test(s);
 	};
 
-	const isName = (val) => {
-		const s = val.trim();
-		if (!s) return false;
-		if (/[@\d]/.test(s)) return false;
-		return /^[A-Za-z' -]+$/.test(s);
+	// ✅ shared name validator: min 2 chars + allowed chars
+	const validateNameValue = (val) => {
+		const s = (val || '').trim();
+		if (!s) return 'This field is required';
+		if (s.length < 2) return 'Must be at least 2 characters';
+		if (!/^[A-Za-z' -]+$/.test(s)) {
+			return "Only letters, spaces, ' and - are allowed";
+		}
+		return '';
 	};
+
+	// keep boolean helper for form-level checks
+	const isName = (val) => !validateNameValue(val);
 
 	const guestsNum = Number(guests);
 	const isValidGuests = Number.isInteger(guestsNum) && guestsNum >= 1;
@@ -133,6 +144,11 @@ export default function ReservationScreen() {
 
 	const handleBookTable = async () => {
 		setShowErrors(true);
+
+		// validate names again on submit
+		setFirstNameError(validateNameValue(firstName));
+		setLastNameError(validateNameValue(lastName));
+
 		if (!isFormValid()) return;
 
 		setSaving(true);
@@ -157,6 +173,19 @@ export default function ReservationScreen() {
 
 			const response = await makeReservation(payload);
 
+			// 👉 Handle raw string error like "MySQL server has gone away470"
+			if (typeof response === 'string') {
+				if (response.toLowerCase().includes('mysql server has gone away')) {
+					setErrorMessage(
+						'Server connection error. Please try again.'
+					);
+				} else {
+					setErrorMessage('Reservation failed. Please try again.');
+				}
+				setErrorPopupVisible(true);
+				return;
+			}
+
 			if (response?.status === 'Success') {
 				setSuccessMessage(response?.msg || 'Reservation confirmed.');
 				setPopupVisible(true);
@@ -171,6 +200,8 @@ export default function ReservationScreen() {
 				setGuests('');
 				setSpecialInstructions('');
 				setShowErrors(false);
+				setFirstNameError('');
+				setLastNameError('');
 			} else {
 				setErrorMessage(response?.msg || 'Reservation failed. Please try again.');
 				setErrorPopupVisible(true);
@@ -210,7 +241,9 @@ export default function ReservationScreen() {
 									</View>
 								</Pressable>
 								{showErrors && !isValidTitle(title) && (
-									<Text style={styles.errorText}>Title can contain only letters, spaces, and dots.</Text>
+									<Text style={styles.errorText}>
+										Title can contain only letters, spaces, and dots.
+									</Text>
 								)}
 							</View>
 
@@ -221,17 +254,21 @@ export default function ReservationScreen() {
 										First Name <Text style={styles.required}>*</Text>
 									</Text>
 									<TextInput
-										style={styles.input}
+										style={[
+											styles.input,
+											firstNameError && styles.inputError,
+										]}
 										placeholder="First name"
 										value={firstName}
 										onChangeText={(t) => {
 											const cleaned = t.replace(/[^A-Za-z' -]/g, '');
 											setFirstName(cleaned);
+											setFirstNameError(validateNameValue(cleaned)); // 🔴 real-time error
 										}}
 										placeholderTextColor={Colors.placeholder}
 									/>
-									{showErrors && !isName(firstName) && (
-										<Text style={styles.errorText}>First name required.</Text>
+									{!!firstNameError && (
+										<Text style={styles.errorText}>{firstNameError}</Text>
 									)}
 								</View>
 								<View style={[styles.field, styles.half]}>
@@ -239,17 +276,21 @@ export default function ReservationScreen() {
 										Last Name <Text style={styles.required}>*</Text>
 									</Text>
 									<TextInput
-										style={styles.input}
+										style={[
+											styles.input,
+											lastNameError && styles.inputError,
+										]}
 										placeholder="Last name"
 										value={lastName}
 										onChangeText={(t) => {
 											const cleaned = t.replace(/[^A-Za-z' -]/g, '');
 											setLastName(cleaned);
+											setLastNameError(validateNameValue(cleaned)); // 🔴 real-time error
 										}}
 										placeholderTextColor={Colors.placeholder}
 									/>
-									{showErrors && !isName(lastName) && (
-										<Text style={styles.errorText}>Last name required.</Text>
+									{!!lastNameError && (
+										<Text style={styles.errorText}>{lastNameError}</Text>
 									)}
 								</View>
 							</View>
@@ -268,7 +309,9 @@ export default function ReservationScreen() {
 									onChangeText={setEmail}
 									placeholderTextColor={Colors.placeholder}
 								/>
-								{!email.trim() && showErrors && <Text style={styles.errorText}>Email is required</Text>}
+								{!email.trim() && showErrors && (
+									<Text style={styles.errorText}>Email is required</Text>
+								)}
 								{email.trim() && !isValidEmail(email) && showErrors && (
 									<Text style={styles.errorText}>Invalid email format</Text>
 								)}
@@ -305,14 +348,16 @@ export default function ReservationScreen() {
 									<View pointerEvents="none">
 										<TextInput
 											style={styles.input}
-											placeholder="DD-MM-YYYY" // ✅ updated placeholder
+											placeholder="DD-MM-YYYY"
 											value={date}
 											placeholderTextColor={Colors.placeholder}
 											editable={false}
 										/>
 									</View>
 								</Pressable>
-								{!date.trim() && showErrors && <Text style={styles.errorText}>Date is required</Text>}
+								{!date.trim() && showErrors && (
+									<Text style={styles.errorText}>Date is required</Text>
+								)}
 							</View>
 
 							{/* Time */}
@@ -331,7 +376,9 @@ export default function ReservationScreen() {
 										/>
 									</View>
 								</Pressable>
-								{!time.trim() && showErrors && <Text style={styles.errorText}>Time is required</Text>}
+								{!time.trim() && showErrors && (
+									<Text style={styles.errorText}>Time is required</Text>
+								)}
 							</View>
 
 							{/* Guests */}
@@ -348,7 +395,9 @@ export default function ReservationScreen() {
 									placeholderTextColor={Colors.placeholder}
 								/>
 								{showErrors && (!guests.trim() || !isValidGuests) && (
-									<Text style={styles.errorText}>Enter a valid number of guests (at least 1)</Text>
+									<Text style={styles.errorText}>
+										Enter a valid number of guests (at least 1)
+									</Text>
 								)}
 							</View>
 
@@ -375,7 +424,9 @@ export default function ReservationScreen() {
 									style={!isFormValid() ? { opacity: 0.6 } : {}}
 								/>
 								{!isFormValid() && showErrors && (
-									<Text style={{ color: 'red', marginTop: 10, textAlign: 'center' }}>
+									<Text
+										style={{ color: 'red', marginTop: 10, textAlign: 'center' }}
+									>
 										Please fill all required fields with valid information.
 									</Text>
 								)}
@@ -514,9 +565,16 @@ const styles = StyleSheet.create({
 		color: '#222222',
 		backgroundColor: '#FFFFFF',
 	},
+	inputError: {
+		borderColor: '#D32F2F',
+	},
 	row: { flexDirection: 'row', justifyContent: 'space-between' },
 	half: { flex: 0.48 },
-	buttonContainer: { marginTop: 24, justifyContent: 'center', alignItems: 'center' },
+	buttonContainer: {
+		marginTop: 24,
+		justifyContent: 'center',
+		alignItems: 'center',
+	},
 	textarea: { height: 100, paddingTop: 10 },
 	required: { color: '#D32F2F' },
 	errorText: { color: '#D32F2F', fontSize: 12, marginTop: 4 },
