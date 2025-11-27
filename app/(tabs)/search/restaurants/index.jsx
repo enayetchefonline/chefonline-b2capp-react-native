@@ -108,10 +108,10 @@ export default function RestaurantListScreen() {
 		const scheduleList = restaurant?.restuarent_schedule?.schedule || [];
 		console.log("rest schedulelist", JSON.stringify(scheduleList))
 		const status = getRestaurantScheduleStatus(scheduleList, getCurrentApiDateTimeObj());
-		if (status === 'CLOSED' && storeOrderType !== 'reservation') {
-			setShowClosedPopup(true);
-			return;
-		}
+		// if (status === 'CLOSED' && storeOrderType !== 'reservation') {
+		// 	setShowClosedPopup(true);
+		// 	return;
+		// }
 
 		if (Object.keys(cart.items).length > 0 && cart.restaurantId && cart.restaurantId !== restaurantId) {
 			setSelectedRestaurantId(restaurantId);

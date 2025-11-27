@@ -154,6 +154,9 @@ export default function RestaurantDetailScreen() {
 		if (storeOrderType === 'reservation' && restaurantScheduleStatus === 'CLOSED') {
 			alert("Sorry we are closed today");
 			return;
+		} else if (storeOrderType === 'takeaway' && restaurantScheduleStatus === 'CLOSED') {
+			alert("Sorry we are closed today");
+			return;
 		} else {
 			// Proceed to cart
 			router.push('/cart');
