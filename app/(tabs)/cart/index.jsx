@@ -77,10 +77,6 @@ export default function CartScreen() {
       const status = getRestaurantScheduleStatus(scheduleList, currentApiDateTimeObj); // e.g. 'OPEN' | 'CLOSED'
 
       setRestaurantScheduleStatus(status);
-
-      console.log('scheduleList.......cart', scheduleList);
-      console.log('restaurantScheduleStatus.......cart', status);
-      console.log('storeOrderType.......cart', storeOrderType);
     } catch (err) {
       console.log('Failed to calculate restaurant schedule status', err);
       setRestaurantScheduleStatus(null);
@@ -109,10 +105,6 @@ export default function CartScreen() {
 
   // IP address via reusable hook
   const { ipAddress } = useIpAddress();
-
-  // const isUserHasNumber = authUser?.mobile_no && authUser?.mobile_no !== '';
-
-  // console.log('isUserHasNumber', isUserHasNumber);
 
   const availableModes = (storeOrderPolicy?.policy || []).map((p) => p.policy_name);
 
@@ -317,6 +309,8 @@ export default function CartScreen() {
       // 1) Send OTP + register number on backend
       const response = await callCheckUserPhone(trimmed);
 
+      console.log("callCheckUserPhone", response)
+
       if (response?.status === 'success') {
         // 2) Build updated user (still unverified)
         const updatedUser = {
@@ -409,7 +403,7 @@ export default function CartScreen() {
         otp: trimmedOtp,
       });
 
-      // console.log('userPhoneVerify response', resp);
+      console.log('userPhoneVerify response', resp);
 
       if (resp?.status === 'success') {
         // ✅ Mark user as verified
@@ -462,14 +456,6 @@ export default function CartScreen() {
       setOtpLoading(false);
     }
   };
-
-  // const checkResturantIsOpen = () => {
-  //   const scheduleList = restaurant?.restuarent_schedule?.schedule ?? [];
-  //         const currentApiDateTimeObj = getCurrentApiDateTimeObj();
-  //         const status = getRestaurantScheduleStatus(scheduleList, currentApiDateTimeObj);
-  //         setRestaurantScheduleStatus(status);
-  //         return status;
-  // }
 
   // ⭐ handleProceed with optional skipPhoneCheck flag
   const handleProceed = async (skipPhoneCheck = false) => {
