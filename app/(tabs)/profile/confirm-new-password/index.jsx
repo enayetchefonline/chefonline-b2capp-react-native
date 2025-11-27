@@ -35,9 +35,12 @@ export default function ConfirmNewPasswordScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // 🔴 field-level errors
+  // field-level errors
   const [newPasswordError, setNewPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
+
+  // track if confirm field is touched
+  const [confirmTouched, setConfirmTouched] = useState(false);
 
   const [popupVisible, setPopupVisible] = useState(false);
   const [popupTitle, setPopupTitle] = useState('');
@@ -79,11 +82,17 @@ export default function ConfirmNewPasswordScreen() {
     const err = validatePassword(text);
     setNewPasswordError(err);
 
-    // re-validate confirm when new changes
-    setConfirmPasswordError(validateConfirmPassword(confirmPassword, text));
+    // ✅ only re-validate confirm if user has already interacted with it
+    if (confirmTouched && confirmPassword) {
+      const confirmErr = validateConfirmPassword(confirmPassword, text);
+      setConfirmPasswordError(confirmErr);
+    }
   };
 
   const handleConfirmPasswordChange = (text) => {
+    if (!confirmTouched) {
+      setConfirmTouched(true);
+    }
     setConfirmPassword(text);
     const err = validateConfirmPassword(text, newPassword);
     setConfirmPasswordError(err);
@@ -97,7 +106,6 @@ export default function ConfirmNewPasswordScreen() {
     setNewPasswordError(newErr);
     setConfirmPasswordError(confirmErr);
 
-    // ❗ If validation fails, just show inline errors – no popup
     if (newErr || confirmErr) return;
 
     const trimmedNew = newPassword.trim();

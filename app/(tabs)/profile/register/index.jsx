@@ -25,42 +25,41 @@ const lastNameRegex = /^[a-zA-Z'-]{2,50}$/;
 
 // ---- Field-level validators (for real-time + submit) ----
 const validateFirstNameValue = (value) => {
-	const trimmed = (value || '').trim();
-	if (!trimmed) return 'First name is required';
-	if (trimmed.length < 2) return 'First name must be at least 2 characters';
-	if (!firstNameRegex.test(trimmed))
-		return "First name can only contain letters, ' and - (no spaces or symbols).";
-	return '';
+  const trimmed = (value || '').trim();
+  if (!trimmed) return 'First name is required';
+  if (trimmed.length < 2) return 'First name must be at least 2 characters';
+  if (!firstNameRegex.test(trimmed))
+    return "First name can only contain letters, ' and - (no spaces or symbols).";
+  return '';
 };
 
 const validateLastNameValue = (value) => {
-	const trimmed = (value || '').trim();
-	if (!trimmed) return 'Last name is required';
-	if (trimmed.length < 2) return 'Last name must be at least 2 characters';
-	if (!lastNameRegex.test(trimmed))
-		return "Last name can only contain letters, ' and - (no spaces or symbols).";
-	return '';
+  const trimmed = (value || '').trim();
+  if (!trimmed) return 'Last name is required';
+  if (trimmed.length < 2) return 'Last name must be at least 2 characters';
+  if (!lastNameRegex.test(trimmed))
+    return "Last name can only contain letters, ' and - (no spaces or symbols).";
+  return '';
 };
 
 const validateEmailValue = (value) => {
-	const trimmed = (value || '').trim();
-	if (!trimmed) return 'Email is required';
-	if (!emailRegex.test(trimmed)) return 'Invalid email format';
-	return '';
+  const trimmed = (value || '').trim();
+  if (!trimmed) return 'Email is required';
+  if (!emailRegex.test(trimmed)) return 'Invalid email format';
+  return '';
 };
 
 const validateMobileValue = (value) => {
-	const trimmed = (value || '').trim();
-	if (!trimmed) return 'Mobile number is required';
-	if (!ukMobileRegex.test(trimmed))
-		return 'Enter a valid UK mobile number (11 digits, starts with 07)';
-	return '';
+  const trimmed = (value || '').trim();
+  if (!trimmed) return 'Mobile number is required';
+  if (!ukMobileRegex.test(trimmed))
+    return 'Enter a valid UK mobile number (11 digits, starts with 07)';
+  return '';
 };
 
 const validatePasswordValue = (value) => {
   const raw = value || '';
 
-  // ❗ No space allowed in password
   if (/\s/.test(raw)) return 'Spaces are not allowed in password';
 
   const trimmed = raw.trim();
@@ -70,11 +69,9 @@ const validatePasswordValue = (value) => {
   return '';
 };
 
-
 const validateConfirmPasswordValue = (confirmValue, passwordValue) => {
   const rawConfirm = confirmValue || '';
 
-  // ❗ No space allowed in confirm password
   if (/\s/.test(rawConfirm)) return 'Spaces are not allowed in confirm password';
 
   const trimmedConfirm = rawConfirm.trim();
@@ -86,598 +83,594 @@ const validateConfirmPasswordValue = (confirmValue, passwordValue) => {
   return '';
 };
 
-
-
 function validateForm(form, skipPolicy = false) {
-	const errors = {};
+  const errors = {};
 
-	// First name
-	const fnError = validateFirstNameValue(form.firstName);
-	if (fnError) errors.firstName = fnError;
+  const fnError = validateFirstNameValue(form.firstName);
+  if (fnError) errors.firstName = fnError;
 
-	// Last name
-	const lnError = validateLastNameValue(form.lastName);
-	if (lnError) errors.lastName = lnError;
+  const lnError = validateLastNameValue(form.lastName);
+  if (lnError) errors.lastName = lnError;
 
-	// Email
-	const emailError = validateEmailValue(form.email);
-	if (emailError) errors.email = emailError;
+  const emailError = validateEmailValue(form.email);
+  if (emailError) errors.email = emailError;
 
-	// Mobile
-	const mobileError = validateMobileValue(form.mobile);
-	if (mobileError) errors.mobile = mobileError;
+  const mobileError = validateMobileValue(form.mobile);
+  if (mobileError) errors.mobile = mobileError;
 
-	// Password
-	const pwdError = validatePasswordValue(form.password);
-	if (pwdError) errors.password = pwdError;
+  const pwdError = validatePasswordValue(form.password);
+  if (pwdError) errors.password = pwdError;
 
-	// Confirm Password
-	const cpError = validateConfirmPasswordValue(form.confirmPassword, form.password);
-	if (cpError) errors.confirmPassword = cpError;
+  const cpError = validateConfirmPasswordValue(form.confirmPassword, form.password);
+  if (cpError) errors.confirmPassword = cpError;
 
-	// Policy
-	if (!skipPolicy && !form.agreePolicy) {
-		errors.agreePolicy = 'You must agree to the terms and policies';
-	}
+  if (!skipPolicy && !form.agreePolicy) {
+    errors.agreePolicy = 'You must agree to the terms and policies';
+  }
 
-	return errors;
+  return errors;
 }
 
 export default function RegisterScreen() {
-	const router = useRouter();
-	const [popupVisible, setPopupVisible] = useState(false);
-	const [popupTitle, setPopupTitle] = useState('');
-	const [popupMessage, setPopupMessage] = useState('');
-	const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const [popupVisible, setPopupVisible] = useState(false);
+  const [popupTitle, setPopupTitle] = useState('');
+  const [popupMessage, setPopupMessage] = useState('');
+  const [loading, setLoading] = useState(false);
 
-	const [form, setForm] = useState({
-		firstName: '',
-		lastName: '',
-		email: '',
-		mobile: '',
-		password: '',
-		confirmPassword: '',
-		agreePolicy: false,
-		emailConsent: 1,
-		smsConsent: 1,
-	});
+  const [form, setForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    mobile: '',
+    password: '',
+    confirmPassword: '',
+    agreePolicy: false,
+    emailConsent: 1,
+    smsConsent: 1,
+  });
 
-	const [fieldErrors, setFieldErrors] = useState({});
-	const [showPassword, setShowPassword] = useState(false);
-	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-	const handleChange = (key, value) => {
-		setForm((prev) => {
-			const updated = { ...prev, [key]: value };
+  // 👇 track if confirm password field has been touched
+  const [confirmTouched, setConfirmTouched] = useState(false);
 
-			// 🔹 Real-time validation per field
-			setFieldErrors((prevErrors) => {
-				const nextErrors = { ...prevErrors };
+  const handleChange = (key, value) => {
+    // mark confirm as touched when user types there
+    if (key === 'confirmPassword' && !confirmTouched) {
+      setConfirmTouched(true);
+    }
 
-				if (key === 'firstName') {
-					const err = validateFirstNameValue(value);
-					nextErrors.firstName = err || undefined;
-				} else if (key === 'lastName') {
-					const err = validateLastNameValue(value);
-					nextErrors.lastName = err || undefined;
-				} else if (key === 'email') {
-					const err = validateEmailValue(value);
-					nextErrors.email = err || undefined;
-				} else if (key === 'mobile') {
-					const err = validateMobileValue(value);
-					nextErrors.mobile = err || undefined;
-				} else if (key === 'password') {
-					const pwdErr = validatePasswordValue(value);
-					nextErrors.password = pwdErr || undefined;
+    setForm((prev) => {
+      const updated = { ...prev, [key]: value };
 
-					// also re-validate confirmPassword since it depends on password
-					const confirmErr = validateConfirmPasswordValue(
-						updated.confirmPassword,
-						value
-					);
-					nextErrors.confirmPassword = confirmErr || undefined;
-				} else if (key === 'confirmPassword') {
-					const err = validateConfirmPasswordValue(value, updated.password);
-					nextErrors.confirmPassword = err || undefined;
-				} else if (key === 'agreePolicy') {
-					// clear policy error when toggled true
-					if (value) nextErrors.agreePolicy = undefined;
-				}
+      // 🔹 Real-time validation per field
+      setFieldErrors((prevErrors) => {
+        const nextErrors = { ...prevErrors };
 
-				return nextErrors;
-			});
+        if (key === 'firstName') {
+          const err = validateFirstNameValue(value);
+          nextErrors.firstName = err || undefined;
+        } else if (key === 'lastName') {
+          const err = validateLastNameValue(value);
+          nextErrors.lastName = err || undefined;
+        } else if (key === 'email') {
+          const err = validateEmailValue(value);
+          nextErrors.email = err || undefined;
+        } else if (key === 'mobile') {
+          const err = validateMobileValue(value);
+          nextErrors.mobile = err || undefined;
+        } else if (key === 'password') {
+          const pwdErr = validatePasswordValue(value);
+          nextErrors.password = pwdErr || undefined;
 
-			return updated;
-		});
-	};
+          // ✅ only re-validate confirm when user has touched confirm field
+          if (confirmTouched && updated.confirmPassword) {
+            const confirmErr = validateConfirmPasswordValue(
+              updated.confirmPassword,
+              value
+            );
+            nextErrors.confirmPassword = confirmErr || undefined;
+          }
+        } else if (key === 'confirmPassword') {
+          const err = validateConfirmPasswordValue(value, updated.password);
+          nextErrors.confirmPassword = err || undefined;
+        } else if (key === 'agreePolicy') {
+          if (value) nextErrors.agreePolicy = undefined;
+        }
 
-	// Disable button unless form looks valid + no current errors
-	const isFormValid = useMemo(() => {
-		const firstNameTrimmed = (form.firstName || '').trim();
-		const lastNameTrimmed = (form.lastName || '').trim();
-		const emailTrimmed = (form.email || '').trim();
-		const mobileTrimmed = (form.mobile || '').trim();
+        return nextErrors;
+      });
 
-		if (!firstNameTrimmed) return false;
-		if (!lastNameTrimmed) return false;
-		if (!emailTrimmed) return false;
-		if (!mobileTrimmed) return false;
-		if (!form.password) return false;
-		if (!form.confirmPassword) return false;
-		if (!form.agreePolicy) return false;
+      return updated;
+    });
+  };
 
-		// Make sure there are no active error messages
-		const hasError = Object.values(fieldErrors).some((e) => !!e);
-		if (hasError) return false;
+  const isFormValid = useMemo(() => {
+    const firstNameTrimmed = (form.firstName || '').trim();
+    const lastNameTrimmed = (form.lastName || '').trim();
+    const emailTrimmed = (form.email || '').trim();
+    const mobileTrimmed = (form.mobile || '').trim();
 
-		// Also run basic inline rules (defensive)
-		if (validateFirstNameValue(form.firstName)) return false;
-		if (validateLastNameValue(form.lastName)) return false;
-		if (validateEmailValue(form.email)) return false;
-		if (validateMobileValue(form.mobile)) return false;
-		if (validatePasswordValue(form.password)) return false;
-		if (validateConfirmPasswordValue(form.confirmPassword, form.password)) return false;
+    if (!firstNameTrimmed) return false;
+    if (!lastNameTrimmed) return false;
+    if (!emailTrimmed) return false;
+    if (!mobileTrimmed) return false;
+    if (!form.password) return false;
+    if (!form.confirmPassword) return false;
+    if (!form.agreePolicy) return false;
 
-		return true;
-	}, [form, fieldErrors]);
+    const hasError = Object.values(fieldErrors).some((e) => !!e);
+    if (hasError) return false;
 
-	const handleSubmit = async () => {
-		// Full validation on submit
-		const errors = validateForm(form, false);
-		setFieldErrors(errors);
+    if (validateFirstNameValue(form.firstName)) return false;
+    if (validateLastNameValue(form.lastName)) return false;
+    if (validateEmailValue(form.email)) return false;
+    if (validateMobileValue(form.mobile)) return false;
+    if (validatePasswordValue(form.password)) return false;
+    if (validateConfirmPasswordValue(form.confirmPassword, form.password)) return false;
 
-		if (Object.keys(errors).length > 0) {
-			// Only show field errors, no popup
-			return;
-		}
+    return true;
+  }, [form, fieldErrors]);
 
-		setLoading(true);
+  const handleSubmit = async () => {
+    const errors = validateForm(form, false);
+    setFieldErrors(errors);
 
-		const payload = {
-			first_name: form.firstName.trim(),
-			last_name: form.lastName.trim(),
-			email: form.email.trim(),
-			mobile_no: form.mobile.trim(),
-			telephone_no: form.mobile.trim(),
-			postcode: '',
-			address1: '',
-			address2: '',
-			city: '',
-			country: '',
-			password: form.password.trim(),
-			dob_date: '',
-			doa: '',
-			ip_address: '',
-			platform: Platform.OS === 'ios' ? 1 : 2,
-			want_newslatter: form.emailConsent,
-			want_text_message: form.smsConsent,
-		};
+    if (Object.keys(errors).length > 0) {
+      return;
+    }
 
-		console.log("clg.......register", payload)
+    setLoading(true);
 
-		try {
-			const response = await userRegisterApi(payload);
+    const payload = {
+      first_name: form.firstName.trim(),
+      last_name: form.lastName.trim(),
+      email: form.email.trim(),
+      mobile_no: form.mobile.trim(),
+      telephone_no: form.mobile.trim(),
+      postcode: '',
+      address1: '',
+      address2: '',
+      city: '',
+      country: '',
+      password: form.password.trim(),
+      dob_date: '',
+      doa: '',
+      ip_address: '',
+      platform: Platform.OS === 'ios' ? 1 : 2,
+      want_newslatter: form.emailConsent,
+      want_text_message: form.smsConsent,
+    };
 
-			console.log('register response', response);
+    console.log('clg.......register', payload);
 
-			if (response.status === 'Success') {
-				setPopupTitle('Success');
-				setPopupMessage('Registered successfully!');
-			} else {
-				setPopupTitle('Registration Failed');
-				setPopupMessage(response?.msg || 'Please try again.');
-			}
-		} catch (_error) {
-			setPopupTitle('Error');
-			setPopupMessage('Something went wrong during registration.');
-		} finally {
-			setPopupVisible(true);
-			setLoading(false);
-		}
-	};
+    try {
+      const response = await userRegisterApi(payload);
 
-	return (
-		<ScrollView style={styles.container} contentContainerStyle={styles.scrollContainer}>
-			{/* First/Last Name */}
-			<View style={styles.row}>
-				<View style={{ flex: 1, marginRight: 8 }}>
-					<Text style={styles.label}>
-						First Name <Text style={styles.required}>*</Text>
-					</Text>
-					<TextInput
-						style={[styles.input, fieldErrors.firstName && styles.inputError]}
-						placeholder="First Name"
-						placeholderTextColor={Colors.placeholder}
-						value={form.firstName}
-						onChangeText={(text) => handleChange('firstName', text)}
-					/>
-					{fieldErrors.firstName && (
-						<Text style={styles.errorText}>{fieldErrors.firstName}</Text>
-					)}
-				</View>
-				<View style={{ flex: 1, marginLeft: 8 }}>
-					<Text style={styles.label}>
-						Last Name <Text style={styles.required}>*</Text>
-					</Text>
-					<TextInput
-						style={[styles.input, fieldErrors.lastName && styles.inputError]}
-						placeholder="Last Name"
-						placeholderTextColor={Colors.placeholder}
-						value={form.lastName}
-						onChangeText={(text) => handleChange('lastName', text)}
-					/>
-					{fieldErrors.lastName && (
-						<Text style={styles.errorText}>{fieldErrors.lastName}</Text>
-					)}
-				</View>
-			</View>
+      console.log('register response', response);
 
-			{/* Email */}
-			<Text style={styles.label}>
-				Email <Text style={styles.required}>*</Text>
-			</Text>
-			<TextInput
-				style={[styles.input, fieldErrors.email && styles.inputError]}
-				placeholder="Email"
-				placeholderTextColor={Colors.placeholder}
-				keyboardType="email-address"
-				autoCapitalize="none"
-				value={form.email}
-				onChangeText={(text) => handleChange('email', text)}
-			/>
-			{fieldErrors.email && <Text style={styles.errorText}>{fieldErrors.email}</Text>}
+      if (response.status === 'Success') {
+        setPopupTitle('Success');
+        setPopupMessage('Registered successfully!');
+      } else {
+        setPopupTitle('Registration Failed');
+        setPopupMessage(response?.msg || 'Please try again.');
+      }
+    } catch (_error) {
+      setPopupTitle('Error');
+      setPopupMessage('Something went wrong during registration.');
+    } finally {
+      setPopupVisible(true);
+      setLoading(false);
+    }
+  };
 
-			{/* Mobile */}
-			<Text style={styles.label}>
-				Mobile No <Text style={styles.required}>*</Text>
-			</Text>
-			<TextInput
-				style={[styles.input, fieldErrors.mobile && styles.inputError]}
-				placeholder="07xxxxxxxxx"
-				placeholderTextColor={Colors.placeholder}
-				keyboardType="phone-pad"
-				value={form.mobile}
-				onChangeText={(text) => handleChange('mobile', text)}
-				maxLength={11}
-			/>
-			{fieldErrors.mobile && <Text style={styles.errorText}>{fieldErrors.mobile}</Text>}
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContainer}>
+      {/* First/Last Name */}
+      <View style={styles.row}>
+        <View style={{ flex: 1, marginRight: 8 }}>
+          <Text style={styles.label}>
+            First Name <Text style={styles.required}>*</Text>
+          </Text>
+          <TextInput
+            style={[styles.input, fieldErrors.firstName && styles.inputError]}
+            placeholder="First Name"
+            placeholderTextColor={Colors.placeholder}
+            value={form.firstName}
+            onChangeText={(text) => handleChange('firstName', text)}
+          />
+          {fieldErrors.firstName && (
+            <Text style={styles.errorText}>{fieldErrors.firstName}</Text>
+          )}
+        </View>
+        <View style={{ flex: 1, marginLeft: 8 }}>
+          <Text style={styles.label}>
+            Last Name <Text style={styles.required}>*</Text>
+          </Text>
+          <TextInput
+            style={[styles.input, fieldErrors.lastName && styles.inputError]}
+            placeholder="Last Name"
+            placeholderTextColor={Colors.placeholder}
+            value={form.lastName}
+            onChangeText={(text) => handleChange('lastName', text)}
+          />
+          {fieldErrors.lastName && (
+            <Text style={styles.errorText}>{fieldErrors.lastName}</Text>
+          )}
+        </View>
+      </View>
 
-			{/* Password + Confirm */}
-			<View style={{ flex: 1 }}>
-				<Text style={styles.label}>
-					Password <Text style={styles.required}>*</Text>
-				</Text>
-				<View style={styles.inputContainer}>
-					<TextInput
-						style={styles.passwordInput}
-						placeholder="Password"
-						placeholderTextColor={Colors.placeholder}
-						secureTextEntry={!showPassword}
-						value={form.password}
-						onChangeText={(text) => handleChange('password', text)}
-					/>
-					<TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-						<Ionicons
-							name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-							size={22}
-							color="#888"
-						/>
-					</TouchableOpacity>
-				</View>
-				{fieldErrors.password && (
-					<Text style={styles.errorText}>{fieldErrors.password}</Text>
-				)}
-			</View>
+      {/* Email */}
+      <Text style={styles.label}>
+        Email <Text style={styles.required}>*</Text>
+      </Text>
+      <TextInput
+        style={[styles.input, fieldErrors.email && styles.inputError]}
+        placeholder="Email"
+        placeholderTextColor={Colors.placeholder}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        value={form.email}
+        onChangeText={(text) => handleChange('email', text)}
+      />
+      {fieldErrors.email && <Text style={styles.errorText}>{fieldErrors.email}</Text>}
 
-			<View style={{ flex: 1 }}>
-				<Text style={styles.label}>
-					Confirm Password <Text style={styles.required}>*</Text>
-				</Text>
-				<View style={styles.inputContainer}>
-					<TextInput
-						style={styles.passwordInput}
-						placeholder="Confirm Password"
-						placeholderTextColor={Colors.placeholder}
-						secureTextEntry={!showConfirmPassword}
-						value={form.confirmPassword}
-						onChangeText={(text) => handleChange('confirmPassword', text)}
-					/>
-					<TouchableOpacity
-						onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-					>
-						<Ionicons
-							name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
-							size={22}
-							color="#888"
-						/>
-					</TouchableOpacity>
-				</View>
-				{fieldErrors.confirmPassword && (
-					<Text style={styles.errorText}>{fieldErrors.confirmPassword}</Text>
-				)}
-			</View>
+      {/* Mobile */}
+      <Text style={styles.label}>
+        Mobile No <Text style={styles.required}>*</Text>
+      </Text>
+      <TextInput
+        style={[styles.input, fieldErrors.mobile && styles.inputError]}
+        placeholder="07xxxxxxxxx"
+        placeholderTextColor={Colors.placeholder}
+        keyboardType="phone-pad"
+        value={form.mobile}
+        onChangeText={(text) => handleChange('mobile', text)}
+        maxLength={11}
+      />
+      {fieldErrors.mobile && <Text style={styles.errorText}>{fieldErrors.mobile}</Text>}
 
-			{/* Policy Checkbox */}
-			<View style={styles.checkboxContainer}>
-				<TouchableOpacity
-					onPress={() => handleChange('agreePolicy', !form.agreePolicy)}
-				>
-					<View
-						style={[
-							styles.checkbox,
-							form.agreePolicy && styles.checkboxChecked,
-						]}
-					/>
-				</TouchableOpacity>
-				<Text style={styles.policyText}>
-					I Agree to the{' '}
-					<Text
-						style={styles.link}
-						onPress={() =>
-							router.push({
-								pathname: '/profile/register/detail',
-								params: {
-									settingsId: 6,
-									settingsName: 'Terms & Conditions',
-									from: 'register',
-								},
-							})
-						}
-					>
-						Terms & Conditions
-					</Text>
-					,{' '}
-					<Text
-						style={styles.link}
-						onPress={() =>
-							router.push({
-								pathname: '/profile/register/detail',
-								params: {
-									settingsId: 7,
-									settingsName: 'Privacy Policy',
-									from: 'register',
-								},
-							})
-						}
-					>
-						Privacy Policy
-					</Text>{' '}
-					&{' '}
-					<Text
-						style={styles.link}
-						onPress={() =>
-							router.push({
-								pathname: '/profile/register/detail',
-								params: {
-									settingsId: 8,
-									settingsName: 'Cookies Policy',
-									from: 'register',
-								},
-							})
-						}
-					>
-						Cookies Policy
-					</Text>{' '}
-				</Text>
-			</View>
-			{fieldErrors.agreePolicy && (
-				<Text style={styles.errorText}>{fieldErrors.agreePolicy}</Text>
-			)}
+      {/* Password + Confirm */}
+      <View style={{ flex: 1 }}>
+        <Text style={styles.label}>
+          Password <Text style={styles.required}>*</Text>
+        </Text>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.passwordInput}
+            placeholder="Password"
+            placeholderTextColor={Colors.placeholder}
+            secureTextEntry={!showPassword}
+            value={form.password}
+            onChangeText={(text) => handleChange('password', text)}
+          />
+          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+            <Ionicons
+              name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+              size={22}
+              color="#888"
+            />
+          </TouchableOpacity>
+        </View>
+        {fieldErrors.password && (
+          <Text style={styles.errorText}>{fieldErrors.password}</Text>
+        )}
+      </View>
 
-			{/* Email Consent */}
-			<View className="radioGroup" style={styles.radioGroup}>
-				<Text style={styles.radioLabel}>
-					I wish to receive emails/newsletters on offers, discounts, promotions
-					and prize draw.
-				</Text>
-				<View style={styles.radioRow}>
-					<View style={styles.radioButtonWrapper}>
-						<RadioButton
-							value="1"
-							status={form.emailConsent === 1 ? 'checked' : 'unchecked'}
-							onPress={() => handleChange('emailConsent', 1)}
-							color={Colors.primary}
-							uncheckedColor="#888"
-						/>
-					</View>
-					<Text style={styles.radioText}>Yes</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.label}>
+          Confirm Password <Text style={styles.required}>*</Text>
+        </Text>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.passwordInput}
+            placeholder="Confirm Password"
+            placeholderTextColor={Colors.placeholder}
+            secureTextEntry={!showConfirmPassword}
+            value={form.confirmPassword}
+            onChangeText={(text) => handleChange('confirmPassword', text)}
+          />
+          <TouchableOpacity
+            onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+          >
+            <Ionicons
+              name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+              size={22}
+              color="#888"
+            />
+          </TouchableOpacity>
+        </View>
+        {fieldErrors.confirmPassword && (
+          <Text style={styles.errorText}>{fieldErrors.confirmPassword}</Text>
+        )}
+      </View>
 
-					<View style={styles.radioButtonWrapper}>
-						<RadioButton
-							value="0"
-							status={form.emailConsent === 0 ? 'checked' : 'unchecked'}
-							onPress={() => handleChange('emailConsent', 0)}
-							color={Colors.primary}
-							uncheckedColor="#888"
-						/>
-					</View>
-					<Text style={styles.radioText}>No</Text>
-				</View>
-			</View>
+      {/* ... rest of your component stays the same ... */}
 
-			{/* SMS Consent */}
-			<View style={styles.radioGroup}>
-				<Text style={styles.radioLabel}>
-					I wish to receive text messages on offers, discounts, promotions and
-					prize draw.
-				</Text>
-				<View style={styles.radioRow}>
-					<View style={styles.radioButtonWrapper}>
-						<RadioButton
-							value="1"
-							status={form.smsConsent === 1 ? 'checked' : 'unchecked'}
-							onPress={() => handleChange('smsConsent', 1)}
-							color={Colors.primary}
-							uncheckedColor="#888"
-						/>
-					</View>
-					<Text style={styles.radioText}>Yes</Text>
+      <View style={styles.checkboxContainer}>
+        <TouchableOpacity
+          onPress={() => handleChange('agreePolicy', !form.agreePolicy)}
+        >
+          <View
+            style={[
+              styles.checkbox,
+              form.agreePolicy && styles.checkboxChecked,
+            ]}
+          />
+        </TouchableOpacity>
+        <Text style={styles.policyText}>
+          I Agree to the{' '}
+          <Text
+            style={styles.link}
+            onPress={() =>
+              router.push({
+                pathname: '/profile/register/detail',
+                params: {
+                  settingsId: 6,
+                  settingsName: 'Terms & Conditions',
+                  from: 'register',
+                },
+              })
+            }
+          >
+            Terms & Conditions
+          </Text>
+          ,{' '}
+          <Text
+            style={styles.link}
+            onPress={() =>
+              router.push({
+                pathname: '/profile/register/detail',
+                params: {
+                  settingsId: 7,
+                  settingsName: 'Privacy Policy',
+                  from: 'register',
+                },
+              })
+            }
+          >
+            Privacy Policy
+          </Text>{' '}
+          &{' '}
+          <Text
+            style={styles.link}
+            onPress={() =>
+              router.push({
+                pathname: '/profile/register/detail',
+                params: {
+                  settingsId: 8,
+                  settingsName: 'Cookies Policy',
+                  from: 'register',
+                },
+              })
+            }
+          >
+            Cookies Policy
+          </Text>{' '}
+        </Text>
+      </View>
+      {fieldErrors.agreePolicy && (
+        <Text style={styles.errorText}>{fieldErrors.agreePolicy}</Text>
+      )}
 
-					<View style={styles.radioButtonWrapper}>
-						<RadioButton
-							value="0"
-							status={form.smsConsent === 0 ? 'checked' : 'unchecked'}
-							onPress={() => handleChange('smsConsent', 0)}
-							color={Colors.primary}
-							uncheckedColor="#888"
-						/>
-					</View>
-					<Text style={styles.radioText}>No</Text>
-				</View>
-			</View>
+      {/* Email Consent */}
+      <View className="radioGroup" style={styles.radioGroup}>
+        <Text style={styles.radioLabel}>
+          I wish to receive emails/newsletters on offers, discounts, promotions
+          and prize draw.
+        </Text>
+        <View style={styles.radioRow}>
+          <View style={styles.radioButtonWrapper}>
+            <RadioButton
+              value="1"
+              status={form.emailConsent === 1 ? 'checked' : 'unchecked'}
+              onPress={() => handleChange('emailConsent', 1)}
+              color={Colors.primary}
+              uncheckedColor="#888"
+            />
+          </View>
+          <Text style={styles.radioText}>Yes</Text>
 
-			{/* Submit Button */}
-			<TouchableOpacity
-				style={[
-					styles.submitBtn,
-					{ backgroundColor: isFormValid ? Colors.primary : '#ddd' },
-				]}
-				disabled={!isFormValid || loading}
-				onPress={handleSubmit}
-			>
-				{loading ? (
-					<ActivityIndicator size="small" color="#fff" />
-				) : (
-					<Text style={styles.submitText}>REGISTER</Text>
-				)}
-			</TouchableOpacity>
+          <View style={styles.radioButtonWrapper}>
+            <RadioButton
+              value="0"
+              status={form.emailConsent === 0 ? 'checked' : 'unchecked'}
+              onPress={() => handleChange('emailConsent', 0)}
+              color={Colors.primary}
+              uncheckedColor="#888"
+            />
+          </View>
+          <Text style={styles.radioText}>No</Text>
+        </View>
+      </View>
 
-			<CustomPopUp
-				visible={popupVisible}
-				title={popupTitle}
-				message={popupMessage}
-				onConfirm={() => {
-					setPopupVisible(false);
-					if (popupTitle === 'Success') {
-						router.replace('/profile/login');
-					}
-				}}
-				confirmText="OK"
-				showCancel={false}
-			/>
-		</ScrollView>
-	);
+      {/* SMS Consent */}
+      <View style={styles.radioGroup}>
+        <Text style={styles.radioLabel}>
+          I wish to receive text messages on offers, discounts, promotions and
+          prize draw.
+        </Text>
+        <View style={styles.radioRow}>
+          <View style={styles.radioButtonWrapper}>
+            <RadioButton
+              value="1"
+              status={form.smsConsent === 1 ? 'checked' : 'unchecked'}
+              onPress={() => handleChange('smsConsent', 1)}
+              color={Colors.primary}
+              uncheckedColor="#888"
+            />
+          </View>
+          <Text style={styles.radioText}>Yes</Text>
+
+          <View style={styles.radioButtonWrapper}>
+            <RadioButton
+              value="0"
+              status={form.smsConsent === 0 ? 'checked' : 'unchecked'}
+              onPress={() => handleChange('smsConsent', 0)}
+              color={Colors.primary}
+              uncheckedColor="#888"
+            />
+          </View>
+          <Text style={styles.radioText}>No</Text>
+        </View>
+      </View>
+
+      {/* Submit Button */}
+      <TouchableOpacity
+        style={[
+          styles.submitBtn,
+          { backgroundColor: isFormValid ? Colors.primary : '#ddd' },
+        ]}
+        disabled={!isFormValid || loading}
+        onPress={handleSubmit}
+      >
+        {loading ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <Text style={styles.submitText}>REGISTER</Text>
+        )}
+      </TouchableOpacity>
+
+      <CustomPopUp
+        visible={popupVisible}
+        title={popupTitle}
+        message={popupMessage}
+        onConfirm={() => {
+          setPopupVisible(false);
+          if (popupTitle === 'Success') {
+            router.replace('/profile/login');
+          }
+        }}
+        confirmText="OK"
+        showCancel={false}
+      />
+    </ScrollView>
+  );
 }
 
 const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-		backgroundColor: '#F9FAFB',
-		padding: 10,
-	},
-	scrollContainer: {
-		padding: 20,
-		backgroundColor: '#fff',
-		borderRadius: 8,
-	},
-	row: {
-		flexDirection: 'row',
-	},
-	label: {
-		color: '#22223B',
-		fontWeight: '600',
-		marginBottom: 2,
-	},
-	required: {
-		color: 'red',
-	},
-	input: {
-		backgroundColor: '#fff',
-		borderColor: '#ccc',
-		borderWidth: 1,
-		borderRadius: 6,
-		paddingHorizontal: 12,
-		paddingVertical: 12,
-		marginBottom: 4,
-		color: '#22223B',
-	},
-	inputError: {
-		borderColor: 'red',
-	},
-	inputContainer: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		borderColor: '#ccc',
-		borderWidth: 1,
-		borderRadius: 6,
-		paddingHorizontal: 12,
-		marginBottom: 4,
-	},
-	passwordInput: {
-		flex: 1,
-		height: 48,
-		color: '#22223B',
-	},
-	checkboxContainer: {
-		flexDirection: 'row',
-		alignItems: 'flex-start',
-		marginTop: 8,
-		marginBottom: 8,
-	},
-	checkbox: {
-		width: 20,
-		height: 20,
-		borderWidth: 1,
-		borderColor: '#ccc',
-		marginTop: 3,
-		marginRight: 8,
-	},
-	checkboxChecked: {
-		backgroundColor: Colors.primary,
-	},
-	policyText: {
-		flex: 1,
-		color: '#22223B',
-		fontSize: 14,
-	},
-	link: {
-		color: 'red',
-		fontWeight: 'bold',
-	},
-	radioGroup: {
-		marginBottom: 12,
-		borderRadius: 6,
-		padding: 12,
-		borderColor: '#ccc',
-		borderWidth: 1,
-	},
-	radioRow: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		marginTop: 8,
-	},
-	radioLabel: {
-		color: '#22223B',
-		fontSize: 14,
-	},
-	radioText: {
-		color: '#22223B',
-		marginRight: 16,
-	},
-	submitBtn: {
-		paddingVertical: 14,
-		borderRadius: 6,
-		alignItems: 'center',
-		marginTop: 10,
-	},
-	submitText: {
-		color: '#fff',
-		fontWeight: 'bold',
-		fontSize: 16,
-	},
-	errorText: {
-		color: 'red',
-		fontSize: 12,
-		marginBottom: 4,
-	},
-	radioButtonWrapper: {
-		borderWidth: 1,
-		borderColor: '#ccc',
-		borderRadius: 100,
-		padding: 0,
-		backgroundColor: '#fff',
-		marginRight: 8,
-		justifyContent: 'center',
-		alignItems: 'center',
-	},
+  container: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+    padding: 10,
+  },
+  scrollContainer: {
+    padding: 20,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+  },
+  row: {
+    flexDirection: 'row',
+  },
+  label: {
+    color: '#22223B',
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  required: {
+    color: 'red',
+  },
+  input: {
+    backgroundColor: '#fff',
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    marginBottom: 4,
+    color: '#22223B',
+  },
+  inputError: {
+    borderColor: 'red',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    marginBottom: 4,
+  },
+  passwordInput: {
+    flex: 1,
+    height: 48,
+    color: '#22223B',
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    marginTop: 3,
+    marginRight: 8,
+  },
+  checkboxChecked: {
+    backgroundColor: Colors.primary,
+  },
+  policyText: {
+    flex: 1,
+    color: '#22223B',
+    fontSize: 14,
+  },
+  link: {
+    color: 'red',
+    fontWeight: 'bold',
+  },
+  radioGroup: {
+    marginBottom: 12,
+    borderRadius: 6,
+    padding: 12,
+    borderColor: '#ccc',
+    borderWidth: 1,
+  },
+  radioRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  radioLabel: {
+    color: '#22223B',
+    fontSize: 14,
+  },
+  radioText: {
+    color: '#22223B',
+    marginRight: 16,
+  },
+  submitBtn: {
+    paddingVertical: 14,
+    borderRadius: 6,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  submitText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  radioButtonWrapper: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 100,
+    padding: 0,
+    backgroundColor: '#fff',
+    marginRight: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });

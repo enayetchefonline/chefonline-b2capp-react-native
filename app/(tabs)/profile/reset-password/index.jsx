@@ -16,240 +16,246 @@ import Colors from '../../../../constants/color';
 import { resetPassword } from '../../../../lib/api';
 
 export default function ResetPasswordScreen() {
-	const router = useRouter();
-	const authUser = useSelector((state) => state.auth.user);
+  const router = useRouter();
+  const authUser = useSelector((state) => state.auth.user);
 
-	// FORM VALUES
-	const [currentPwd, setCurrentPwd] = useState('');
-	const [newPwd, setNewPwd] = useState('');
-	const [confirmPwd, setConfirmPwd] = useState('');
+  // FORM VALUES
+  const [currentPwd, setCurrentPwd] = useState('');
+  const [newPwd, setNewPwd] = useState('');
+  const [confirmPwd, setConfirmPwd] = useState('');
 
-	// FIELD ERRORS
-	const [currentPwdError, setCurrentPwdError] = useState('');
-	const [newPwdError, setNewPwdError] = useState('');
-	const [confirmPwdError, setConfirmPwdError] = useState('');
+  // FIELD ERRORS
+  const [currentPwdError, setCurrentPwdError] = useState('');
+  const [newPwdError, setNewPwdError] = useState('');
+  const [confirmPwdError, setConfirmPwdError] = useState('');
 
-	// TOGGLES
-	const [showCurrent, setShowCurrent] = useState(false);
-	const [showNew, setShowNew] = useState(false);
-	const [showConfirm, setShowConfirm] = useState(false);
+  // track if confirm field was touched
+  const [confirmTouched, setConfirmTouched] = useState(false);
 
-	// LOADING + POPUP
-	const [loading, setLoading] = useState(false);
-	const [popupVisible, setPopupVisible] = useState(false);
+  // TOGGLES
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
-	// ---------------------------
-	// VALIDATION HELPERS
-	// ---------------------------
-	const validatePassword = (value) => {
-		if (!value.trim()) return 'Password is required';
-		if (/\s/.test(value)) return 'Spaces are not allowed';
-		if (value.length < 6) return 'Password must be at least 6 characters';
-		return '';
-	};
+  // LOADING + POPUP
+  const [loading, setLoading] = useState(false);
+  const [popupVisible, setPopupVisible] = useState(false);
 
-	const validateConfirmPassword = (value, newPassword) => {
-		if (!value.trim()) return 'Confirm password is required';
-		if (/\s/.test(value)) return 'Spaces are not allowed';
-		if (newPassword !== value) return 'Passwords do not match';
-		return '';
-	};
+  // ---------------------------
+  // VALIDATION HELPERS
+  // ---------------------------
+  const validatePassword = (value) => {
+    if (!value.trim()) return 'Password is required';
+    if (/\s/.test(value)) return 'Spaces are not allowed';
+    if (value.length < 6) return 'Password must be at least 6 characters';
+    return '';
+  };
 
-	// ---------------------------
-	// REAL-TIME VALIDATION
-	// ---------------------------
-	const handleCurrentPwdChange = (text) => {
-		setCurrentPwd(text);
-		setCurrentPwdError(validatePassword(text));
-	};
+  const validateConfirmPassword = (value, newPassword) => {
+    if (!value.trim()) return 'Confirm password is required';
+    if (/\s/.test(value)) return 'Spaces are not allowed';
+    if (newPassword !== value) return 'Passwords do not match';
+    return '';
+  };
 
-	const handleNewPwdChange = (text) => {
-		setNewPwd(text);
-		setNewPwdError(validatePassword(text));
+  // ---------------------------
+  // REAL-TIME VALIDATION
+  // ---------------------------
+  const handleCurrentPwdChange = (text) => {
+    setCurrentPwd(text);
+    setCurrentPwdError(validatePassword(text));
+  };
 
-		// re-check confirm field when new password changes
-		setConfirmPwdError(validateConfirmPassword(confirmPwd, text));
-	};
+  const handleNewPwdChange = (text) => {
+    setNewPwd(text);
+    setNewPwdError(validatePassword(text));
 
-	const handleConfirmPwdChange = (text) => {
-		setConfirmPwd(text);
-		setConfirmPwdError(validateConfirmPassword(text, newPwd));
-	};
+    // ✅ Only re-check confirm field if user already touched it
+    if (confirmTouched) {
+      if (!confirmPwd) {
+        setConfirmPwdError('Confirm password is required');
+      } else {
+        setConfirmPwdError(validateConfirmPassword(confirmPwd, text));
+      }
+    }
+  };
 
-	// ---------------------------
-	// SUBMIT
-	// ---------------------------
-	const handleReset = async () => {
-		const errCurrent = validatePassword(currentPwd);
-		const errNew = validatePassword(newPwd);
-		const errConfirm = validateConfirmPassword(confirmPwd, newPwd);
+  const handleConfirmPwdChange = (text) => {
+    setConfirmTouched(true); // mark as touched
+    setConfirmPwd(text);
+    setConfirmPwdError(validateConfirmPassword(text, newPwd));
+  };
 
-		setCurrentPwdError(errCurrent);
-		setNewPwdError(errNew);
-		setConfirmPwdError(errConfirm);
+  // ---------------------------
+  // SUBMIT
+  // ---------------------------
+  const handleReset = async () => {
+    const errCurrent = validatePassword(currentPwd);
+    const errNew = validatePassword(newPwd);
+    const errConfirm = validateConfirmPassword(confirmPwd, newPwd);
 
-		if (errCurrent || errNew || errConfirm) return;
+    setCurrentPwdError(errCurrent);
+    setNewPwdError(errNew);
+    setConfirmPwdError(errConfirm);
 
-		setLoading(true);
+    if (errCurrent || errNew || errConfirm) return;
 
-		try {
-			const response = await resetPassword({
-				email: authUser?.email,
-				previousPassword: currentPwd.trim(),
-				newPassword: newPwd.trim(),
-			});
+    setLoading(true);
 
-			if (response?.msg?.toLowerCase().includes('success')) {
-				setPopupVisible(true);
-			} else {
-				setPopupVisible(true);
-			}
-		} catch (error) {
-			console.error(error);
-			setPopupVisible(true);
-		} finally {
-			setLoading(false);
-		}
-	};
+    try {
+      const response = await resetPassword({
+        email: authUser?.email,
+        previousPassword: currentPwd.trim(),
+        newPassword: newPwd.trim(),
+      });
 
-	// ---------------------------
-	// PASSWORD INPUT FIELD UI
-	// ---------------------------
-	const renderPasswordField = (
-		label,
-		value,
-		error,
-		onChange,
-		show,
-		setShow
-	) => (
-		<View style={styles.field}>
-			<Text style={styles.label}>{label}</Text>
+      // You can customise message based on response if you want
+      setPopupVisible(true);
+    } catch (error) {
+      console.error(error);
+      setPopupVisible(true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-			<View style={[styles.inputContainer, error && { borderColor: 'red' }]}>
-				<TextInput
-					style={styles.input}
-					placeholder="••••••••"
-					secureTextEntry={!show}
-					value={value}
-					onChangeText={onChange}
-					placeholderTextColor="#D1D5DB"
-				/>
-				<TouchableOpacity onPress={() => setShow((prev) => !prev)}>
-					<Ionicons
-						name={show ? 'eye-off-outline' : 'eye-outline'}
-						size={20}
-						color={Colors.text}
-					/>
-				</TouchableOpacity>
-			</View>
+  // ---------------------------
+  // PASSWORD INPUT FIELD UI
+  // ---------------------------
+  const renderPasswordField = (
+    label,
+    value,
+    error,
+    onChange,
+    show,
+    setShow
+  ) => (
+    <View style={styles.field}>
+      <Text style={styles.label}>{label}</Text>
 
-			{error ? <Text style={styles.errorText}>{error}</Text> : null}
-		</View>
-	);
+      <View style={[styles.inputContainer, error && { borderColor: 'red' }]}>
+        <TextInput
+          style={styles.input}
+          placeholder="••••••••"
+          secureTextEntry={!show}
+          value={value}
+          onChangeText={onChange}
+          placeholderTextColor="#D1D5DB"
+        />
+        <TouchableOpacity onPress={() => setShow((prev) => !prev)}>
+          <Ionicons
+            name={show ? 'eye-off-outline' : 'eye-outline'}
+            size={20}
+            color={Colors.text}
+          />
+        </TouchableOpacity>
+      </View>
 
-	return (
-		<>
-			<ScrollView contentContainerStyle={styles.container}>
-				<View style={styles.profileContainer}>
-					{renderPasswordField(
-						'Current Password',
-						currentPwd,
-						currentPwdError,
-						handleCurrentPwdChange,
-						showCurrent,
-						setShowCurrent
-					)}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+    </View>
+  );
 
-					{renderPasswordField(
-						'New Password',
-						newPwd,
-						newPwdError,
-						handleNewPwdChange,
-						showNew,
-						setShowNew
-					)}
+  return (
+    <>
+      <ScrollView contentContainerStyle={styles.container}>
+        <View style={styles.profileContainer}>
+          {renderPasswordField(
+            'Current Password',
+            currentPwd,
+            currentPwdError,
+            handleCurrentPwdChange,
+            showCurrent,
+            setShowCurrent
+          )}
 
-					{renderPasswordField(
-						'Confirm New Password',
-						confirmPwd,
-						confirmPwdError,
-						handleConfirmPwdChange,
-						showConfirm,
-						setShowConfirm
-					)}
+          {renderPasswordField(
+            'New Password',
+            newPwd,
+            newPwdError,
+            handleNewPwdChange,
+            showNew,
+            setShowNew
+          )}
 
-					<View style={styles.buttonContainer}>
-						<CustomButton
-							title="RESET PASSWORD"
-							iconName="key-outline"
-							loading={loading}
-							loadingText="Resetting…"
-							onPress={handleReset}
-						/>
-					</View>
-				</View>
-			</ScrollView>
+          {renderPasswordField(
+            'Confirm New Password',
+            confirmPwd,
+            confirmPwdError,
+            handleConfirmPwdChange,
+            showConfirm,
+            setShowConfirm
+          )}
 
-			<CustomPopUp
-				visible={popupVisible}
-				title="Notice"
-				message="Password reset status has been updated."
-				confirmText="OK"
-				showCancel={false}
-				onConfirm={() => {
-					setPopupVisible(false);
-					router.back();
-				}}
-			/>
-		</>
-	);
+          <View style={styles.buttonContainer}>
+            <CustomButton
+              title="RESET PASSWORD"
+              iconName="key-outline"
+              loading={loading}
+              loadingText="Resetting…"
+              onPress={handleReset}
+            />
+          </View>
+        </View>
+      </ScrollView>
+
+      <CustomPopUp
+        visible={popupVisible}
+        title="Notice"
+        message="Password reset status has been updated."
+        confirmText="OK"
+        showCancel={false}
+        onConfirm={() => {
+          setPopupVisible(false);
+          router.back();
+        }}
+      />
+    </>
+  );
 }
 
 const styles = StyleSheet.create({
-	container: {
-		padding: 16,
-	},
-	profileContainer: {
-		backgroundColor: Colors.white,
-		borderRadius: 8,
-		padding: 16,
-		marginBottom: 16,
-		shadowColor: '#000',
-		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.1,
-		shadowRadius: 4,
-		elevation: 10,
-	},
-	field: {
-		marginBottom: 18,
-	},
-	label: {
-		marginBottom: 6,
-		fontWeight: '600',
-		color: Colors.text,
-	},
-	inputContainer: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		borderWidth: 1,
-		borderColor: '#ccc',
-		borderRadius: 4,
-		paddingHorizontal: 10,
-	},
-	input: {
-		flex: 1,
-		paddingVertical: 8,
-		color: Colors.text,
-	},
-	errorText: {
-		color: 'red',
-		fontSize: 12,
-		marginTop: 4,
-	},
-	buttonContainer: {
-		// marginTop: 10,
-		justifyContent: 'center',
-		alignItems: 'center',
-	},
+  container: {
+    padding: 16,
+  },
+  profileContainer: {
+    backgroundColor: Colors.white,
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 10,
+  },
+  field: {
+    marginBottom: 18,
+  },
+  label: {
+    marginBottom: 6,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 4,
+    paddingHorizontal: 10,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 8,
+    color: Colors.text,
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginTop: 4,
+  },
+  buttonContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
