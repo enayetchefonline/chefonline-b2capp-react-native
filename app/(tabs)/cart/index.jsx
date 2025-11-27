@@ -19,6 +19,7 @@ import {
   updateItemQuantity,
 } from '../../../store/slices/cartSlice';
 
+import { getCurrentApiDateTimeObj, getRestaurantScheduleStatus } from '../../../lib/utils/restaurantSchedule';
 import { setUser } from '../../../store/slices/authSlice';
 
 // --- FIXED COLOR CONSTANTS ---
@@ -57,6 +58,38 @@ export default function CartScreen() {
   const storeSelectedDiscountId = useSelector((state) => state.cart.selected_discount_id);
   const storeSelectedOfferId = useSelector((state) => state.cart.selected_offer_id);
 
+  const restaurant = useSelector((state) => state.restaurantDetail);
+  const storeOrderType = useSelector((state) => state.cart.orderType);
+
+  // 🔔 Restaurant schedule / open-closed status
+  const [restaurantScheduleStatus, setRestaurantScheduleStatus] = useState(null);
+
+  const scheduleList = restaurant?.data?.restuarent_schedule?.schedule ?? [];
+
+  useEffect(() => {
+    if (!scheduleList || scheduleList.length === 0) {
+      setRestaurantScheduleStatus(null);
+      return;
+    }
+
+    try {
+      const currentApiDateTimeObj = getCurrentApiDateTimeObj();
+      const status = getRestaurantScheduleStatus(scheduleList, currentApiDateTimeObj); // e.g. 'OPEN' | 'CLOSED'
+
+      setRestaurantScheduleStatus(status);
+
+      console.log('scheduleList.......cart', scheduleList);
+      console.log('restaurantScheduleStatus.......cart', status);
+      console.log('storeOrderType.......cart', storeOrderType);
+    } catch (err) {
+      console.log('Failed to calculate restaurant schedule status', err);
+      setRestaurantScheduleStatus(null);
+    }
+  }, [scheduleList, storeOrderType]);
+
+
+
+
   // get user, token, ip from auth slice
   const { user: authUser, token: authToken, ip: authIp } = useSelector((state) => state.auth);
 
@@ -77,7 +110,7 @@ export default function CartScreen() {
   // IP address via reusable hook
   const { ipAddress } = useIpAddress();
 
-  const isUserHasNumber = authUser?.mobile_no && authUser?.mobile_no !== '';
+  // const isUserHasNumber = authUser?.mobile_no && authUser?.mobile_no !== '';
 
   // console.log('isUserHasNumber', isUserHasNumber);
 
@@ -430,6 +463,14 @@ export default function CartScreen() {
     }
   };
 
+  // const checkResturantIsOpen = () => {
+  //   const scheduleList = restaurant?.restuarent_schedule?.schedule ?? [];
+  //         const currentApiDateTimeObj = getCurrentApiDateTimeObj();
+  //         const status = getRestaurantScheduleStatus(scheduleList, currentApiDateTimeObj);
+  //         setRestaurantScheduleStatus(status);
+  //         return status;
+  // }
+
   // ⭐ handleProceed with optional skipPhoneCheck flag
   const handleProceed = async (skipPhoneCheck = false) => {
     try {
@@ -492,6 +533,19 @@ export default function CartScreen() {
         setVisibleSnackBar(true);
         return;
       }
+
+      // 🛑 Closed handling first (for takeaway / reservation)
+      const isClosed = restaurantScheduleStatus === 'CLOSED';
+
+      if (
+        isClosed &&
+        (storeOrderType === 'reservation' || storeOrderType === 'takeaway')
+      ) {
+        setSnackBarMessage('Sorry, we are closed today.');
+        setVisibleSnackBar(true);
+        return;
+      }
+
 
       const minAmount = getMinOrderAmount();
       if (subtotal < minAmount) {
