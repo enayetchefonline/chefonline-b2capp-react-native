@@ -1,12 +1,12 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-	ScrollView,
-	StyleSheet,
-	Text,
-	TextInput,
-	TouchableOpacity,
-	View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useSelector } from 'react-redux';
@@ -108,6 +108,13 @@ export default function ResetPasswordScreen() {
         previousPassword: currentPwd.trim(),
         newPassword: newPwd.trim(),
       });
+
+      console.log("respose resetpassowd", response)
+
+      if (response.status === 'Failed') {
+        alert(response.msg || 'Password reset failed. Please try again.');
+        return;
+      }
 
       // You can customise message based on response if you want
       setPopupVisible(true);
