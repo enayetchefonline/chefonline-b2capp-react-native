@@ -31,6 +31,7 @@ export default function ProfileScreen() {
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const [showOtpModal, setShowOtpModal] = useState(false);
+  const [showOtpModalMessage, setShowOtpModalMessage] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpSecondsLeft, setOtpSecondsLeft] = useState(180);
@@ -117,6 +118,7 @@ export default function ProfileScreen() {
       if (response?.status === 'success') {
         setShowDeleteConfirmModal(false);
         setOtpCode('');
+        setShowOtpModalMessage(response.msg);
         setShowOtpModal(true);
       } else {
         setShowDeleteConfirmModal(false);
@@ -329,8 +331,7 @@ export default function ProfileScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Verify Deletion</Text>
             <Text style={styles.modalMessage}>
-              An OTP has been sent to your registered mobile number. Enter the code to confirm
-              profile deletion.
+              {showOtpModalMessage}
             </Text>
 
             <Text style={styles.timerText}>Time left: {formatTime(otpSecondsLeft)}</Text>

@@ -1,32 +1,37 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
-	Keyboard,
-	KeyboardAvoidingView,
-	Modal,
-	Platform,
-	Pressable,
-	ScrollView,
-	StyleSheet,
-	Text,
-	TextInput,
-	TouchableOpacity,
-	TouchableWithoutFeedback,
-	View,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { useSelector } from 'react-redux';
 import CustomButton from '../../../../../components/ui/CustomButton';
 import CustomPopUp from '../../../../../components/ui/CustomPopUp';
 import Colors from '../../../../../constants/color';
-import { makeReservation } from '../../../../../lib/api';
+import {
+  makeReservation,
+  sendReservationOtp,
+  verifyReservationOtp,
+} from '../../../../../lib/api';
 import { getReservationTimeSlots } from '../../../../../lib/utils/reservationSchedule';
 
 export default function ReservationScreen() {
   const { restaurantId } = useLocalSearchParams();
 
   const restaurantDetails = useSelector((state) => state.restaurantDetail.data);
-  const restaurantSchedule = restaurantDetails?.restuarent_schedule?.schedule || [];
+  const restaurantSchedule =
+    restaurantDetails?.restuarent_schedule?.schedule || [];
 
   const [title, setTitle] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -56,6 +61,13 @@ export default function ReservationScreen() {
   // 🔴 real-time name errors
   const [firstNameError, setFirstNameError] = useState('');
   const [lastNameError, setLastNameError] = useState('');
+
+  // 🔹 NEW: OTP states
+  const [otpModalVisible, setOtpModalVisible] = useState(false);
+  const [otpInput, setOtpInput] = useState('');
+  const [otpError, setOtpError] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [pendingPayload, setPendingPayload] = useState(null); // reservation payload to use after OTP
 
   const todayStart = useMemo(() => {
     const d = new Date();
@@ -150,37 +162,10 @@ export default function ReservationScreen() {
     }
   };
 
-  const handleBookTable = async () => {
-    // 🔴 full form submission context
-    setErrorContext('submit');
-    setShowErrors(true);
-
-    // validate names again on submit
-    setFirstNameError(validateNameValue(firstName));
-    setLastNameError(validateNameValue(lastName));
-
-    if (!isFormValid()) return;
-
+  // 🔹 Helper: actually perform reservation AFTER OTP verified
+  const proceedReservationWithPayload = async (payload) => {
     setSaving(true);
     try {
-      const ip = await getUserIp();
-      const payload = {
-        restId: restaurantId,
-        title,
-        firstName,
-        lastName,
-        email,
-        mobileNo: phone,
-        telephone,
-        reservationDate: date,
-        reservationTime: time,
-        guest: guests,
-        specialRequest: specialInstructions,
-        ipAddress: ip,
-      };
-
-      console.log('reservation payload', payload);
-
       const response = await makeReservation(payload);
 
       // 👉 Handle raw string error like "MySQL server has gone away470"
@@ -220,6 +205,132 @@ export default function ReservationScreen() {
       setErrorPopupVisible(true);
     } finally {
       setSaving(false);
+    }
+  };
+
+  // ===== SUBMIT (step 1: validate + send OTP) =====
+  const handleBookTable = async () => {
+    // 🔴 full form submission context
+    setErrorContext('submit');
+    setShowErrors(true);
+
+    // validate names again on submit
+    setFirstNameError(validateNameValue(firstName));
+    setLastNameError(validateNameValue(lastName));
+
+    if (!isFormValid()) return;
+
+    try {
+      setSaving(true);
+      const ip = await getUserIp();
+      const payload = {
+        restId: restaurantId,
+        title,
+        firstName,
+        lastName,
+        email,
+        mobileNo: phone,
+        telephone,
+        reservationDate: date,
+        reservationTime: time,
+        guest: guests,
+        specialRequest: specialInstructions,
+        ipAddress: ip,
+      };
+
+      console.log('reservation payload (pending OTP)', payload);
+      setPendingPayload(payload);
+
+      // 🔔 Step 1: Send OTP to reservation mobile_no
+      const otpResponse = await sendReservationOtp({ mobile_no: phone });
+
+      if (typeof otpResponse === 'string') {
+        // Backend returned raw string (treat as error text)
+        setErrorMessage(
+          otpResponse.toLowerCase().includes('mysql server has gone away')
+            ? 'Server connection error. Please try again.'
+            : otpResponse || 'Failed to send OTP. Please try again.'
+        );
+        setErrorPopupVisible(true);
+        return;
+      }
+
+      const status = otpResponse?.status?.toString().toLowerCase();
+
+      if (status === 'success') {
+        // ✅ OTP sent → show OTP modal
+        setOtpInput('');
+        setOtpError('');
+        setOtpModalVisible(true);
+      } else {
+        setErrorMessage(
+          otpResponse?.msg || 'Failed to send OTP. Please try again.'
+        );
+        setErrorPopupVisible(true);
+      }
+    } catch (e) {
+      console.log('sendReservationOtp error', e);
+      setErrorMessage('Failed to send OTP. Please try again.');
+      setErrorPopupVisible(true);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ===== OTP VERIFY (step 2: verify + call makeReservation) =====
+  const handleVerifyOtp = async () => {
+    const trimmed = (otpInput || '').trim();
+
+    if (!trimmed) {
+      setOtpError('Please enter the OTP.');
+      return;
+    }
+
+    if (!/^\d{4,6}$/.test(trimmed)) {
+      setOtpError('Enter a valid OTP (4–6 digits).');
+      return;
+    }
+
+    if (!pendingPayload) {
+      setOtpError('Something went wrong. Please try again.');
+      return;
+    }
+
+    try {
+      setOtpLoading(true);
+
+      const verifyResp = await verifyReservationOtp({
+        mobile_no: phone,
+        otp: trimmed,
+      });
+
+      if (typeof verifyResp === 'string') {
+        // If backend returns string, try to detect success keyword
+        if (verifyResp.toLowerCase().includes('success')) {
+          // treat as success
+        } else {
+          setOtpError(verifyResp || 'Invalid OTP. Please try again.');
+          return;
+        }
+      } else {
+        const status = verifyResp?.status?.toString().toLowerCase();
+        if (status !== 'success') {
+          setOtpError(verifyResp?.msg || 'Invalid OTP. Please try again.');
+          return;
+        }
+      }
+
+      // ✅ OTP verified → close modal and proceed with reservation
+      setOtpModalVisible(false);
+      setOtpInput('');
+      setOtpError('');
+      await proceedReservationWithPayload(pendingPayload);
+      setPendingPayload(null);
+    } catch (err) {
+      console.log('verifyReservationOtp error', err);
+      setOtpError('Something went wrong. Please try again.');
+    } finally {
+      setOtpLoading(false);
     }
   };
 
@@ -570,6 +681,81 @@ export default function ReservationScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* 🔹 OTP Modal for Reservation */}
+      <Modal
+        visible={otpModalVisible}
+        animationType="fade"
+        transparent
+        onRequestClose={() => {
+          if (!otpLoading) {
+            setOtpModalVisible(false);
+          }
+        }}
+      >
+        <TouchableWithoutFeedback
+          onPress={() => {
+            if (!otpLoading) setOtpModalVisible(false);
+          }}
+        >
+          <View style={styles.otpBackdrop}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View style={styles.otpContainer}>
+                <Text style={styles.otpTitle}>Verify Mobile Number</Text>
+                <Text style={styles.otpSubtitle}>
+                  We have sent an OTP to {phone || 'your mobile number'}.
+                </Text>
+
+                <TextInput
+                  style={[
+                    styles.otpInput,
+                    otpError ? { borderColor: '#D32F2F' } : null,
+                  ]}
+                  placeholder="Enter OTP"
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  value={otpInput}
+                  onChangeText={(t) => {
+                    const cleaned = t.replace(/\D/g, '');
+                    setOtpInput(cleaned);
+                    setOtpError('');
+                  }}
+                  placeholderTextColor={Colors.placeholder}
+                />
+                {otpError ? (
+                  <Text style={styles.otpErrorText}>{otpError}</Text>
+                ) : null}
+
+                <View style={styles.otpButtonsRow}>
+                  <TouchableOpacity
+                    style={[styles.otpButton, styles.otpCancelButton]}
+                    disabled={otpLoading}
+                    onPress={() => {
+                      if (!otpLoading) {
+                        setOtpModalVisible(false);
+                        setOtpInput('');
+                        setOtpError('');
+                      }
+                    }}
+                  >
+                    <Text style={styles.otpCancelText}>Cancel</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.otpButton, styles.otpConfirmButton]}
+                    disabled={otpLoading}
+                    onPress={handleVerifyOtp}
+                  >
+                    <Text style={styles.otpConfirmText}>
+                      {otpLoading ? 'Verifying…' : 'Verify & Book'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </>
   );
 }
@@ -639,5 +825,69 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 16,
     color: Colors.text,
+  },
+
+  // 🔹 OTP modal styles
+  otpBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  otpContainer: {
+    width: '85%',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 20,
+    elevation: 8,
+  },
+  otpTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 6,
+    color: '#222',
+  },
+  otpSubtitle: {
+    fontSize: 13,
+    color: '#555',
+    marginBottom: 14,
+  },
+  otpInput: {
+    borderWidth: 1,
+    borderColor: '#CCCCCC',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    color: '#222222',
+    backgroundColor: '#FFFFFF',
+  },
+  otpErrorText: {
+    color: '#D32F2F',
+    fontSize: 12,
+    marginTop: 6,
+  },
+  otpButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 16,
+  },
+  otpButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  otpCancelButton: {
+    backgroundColor: '#F3F4F6',
+  },
+  otpConfirmButton: {
+    backgroundColor: Colors.primary || '#EC1839',
+  },
+  otpCancelText: {
+    color: '#4B5563',
+  },
+  otpConfirmText: {
+    color: '#fff',
+    fontWeight: '600',
   },
 });
