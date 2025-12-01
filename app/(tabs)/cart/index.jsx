@@ -66,6 +66,9 @@ export default function CartScreen() {
 
   const scheduleList = restaurant?.data?.restuarent_schedule?.schedule ?? [];
 
+  console.log('storeSelectedDiscountId', storeSelectedDiscountId);
+  console.log('storeSelectedOfferId', storeSelectedOfferId);
+
   useEffect(() => {
     if (!scheduleList || scheduleList.length === 0) {
       setRestaurantScheduleStatus(null);
@@ -82,9 +85,6 @@ export default function CartScreen() {
       setRestaurantScheduleStatus(null);
     }
   }, [scheduleList, storeOrderType]);
-
-
-
 
   // get user, token, ip from auth slice
   const { user: authUser, token: authToken, ip: authIp } = useSelector((state) => state.auth);
@@ -162,9 +162,26 @@ export default function CartScreen() {
     }
   }, [storeItemList]);
 
+  // Precompute applicable discounts/offers for current mode + subtotal
+  const applicableDiscounts = (storeDiscount?.status === 1 ? storeDiscount.off : []).filter((d) => {
+    const orderType = d.order_type?.toLowerCase();
+    return (
+      d.active === 1 &&
+      (orderType === mode?.toLowerCase() || orderType === 'both') &&
+      parseFloat(d.eligible_amount || 0) <= subtotal
+    );
+  });
+
+  const applicableOffers = (storeOffer?.status === 1 ? storeOffer.offer_list : []).filter((o) => {
+    return o.active === 1 && parseFloat(o.eligible_amount || 0) <= subtotal;
+  });
+
+  console.log('applicableDiscounts', applicableDiscounts);
+  console.log('applicableOffers', applicableOffers);
+
   // 👉 Handle:
   // 1) Auto-select single policy
-  // 2) Auto-select single applicable discount/offer
+  // 2) Auto-select discount only when discounts exist and no offers
   useEffect(() => {
     // --- 1) Auto-select order policy if only one and cart has items ---
     if (!mode && availableModes.length === 1 && Object.keys(storeItemList || {}).length > 0) {
@@ -178,65 +195,36 @@ export default function CartScreen() {
       return;
     }
 
-    // --- 2) Calculate applicable discounts for current mode + subtotal ---
-    let applicableDiscountsLocal = [];
-    if (storeDiscount?.status === 1 && Array.isArray(storeDiscount.off)) {
-      applicableDiscountsLocal = storeDiscount.off.filter((d) => {
-        const orderType = d.order_type?.toLowerCase();
-        return (
-          d.active === 1 &&
-          (orderType === mode.toLowerCase() || orderType === 'both') &&
-          parseFloat(d.eligible_amount || 0) <= subtotal
-        );
-      });
-    }
-
-    // --- 3) Calculate applicable offers for current subtotal ---
-    let applicableOffersLocal = [];
-    if (storeOffer?.status === 1 && Array.isArray(storeOffer.offer_list)) {
-      applicableOffersLocal = storeOffer.offer_list.filter((o) => {
-        return o.active === 1 && parseFloat(o.eligible_amount || 0) <= subtotal;
-      });
-    }
-
-    // --- 4) Auto-select only if there is exactly ONE option in total (one discount OR one offer) ---
+    // --- 2) Auto-select logic (per requirements) ---
+    // - If only discounts are applicable (no offers) and nothing selected → auto select discount
+    // - If offers + discounts both exist → no auto select (user will pick)
+    // - If only offers exist → no auto select
     if (!storeSelectedDiscountId && !storeSelectedOfferId) {
-      const totalOptions = applicableDiscountsLocal.length + applicableOffersLocal.length;
+      const hasDiscounts = applicableDiscounts.length > 0;
+      const hasOffers = applicableOffers.length > 0;
 
-      if (totalOptions === 1) {
-        if (applicableDiscountsLocal.length === 1) {
-          const onlyDiscount = applicableDiscountsLocal[0];
-          dispatch(setSelectedRestaurantDiscountId(onlyDiscount.discount_id));
-        } else if (applicableOffersLocal.length === 1) {
-          const onlyOffer = applicableOffersLocal[0];
-          dispatch(setSelectedRestaurantOfferId(onlyOffer.id));
+      if (hasDiscounts && !hasOffers) {
+        // auto check discount
+        const firstDiscount = applicableDiscounts[0];
+        if (firstDiscount) {
+          dispatch(setSelectedRestaurantDiscountId(firstDiscount.discount_id));
         }
       }
+      // else:
+      // - hasDiscounts && hasOffers → do nothing (no auto-select)
+      // - !hasDiscounts && hasOffers → do nothing (no auto-select for offers)
     }
   }, [
     availableModes,
     mode,
     storeItemList,
     dispatch,
-    storeDiscount,
-    storeOffer,
+    subtotal,
+    applicableDiscounts,
+    applicableOffers,
     storeSelectedDiscountId,
     storeSelectedOfferId,
-    subtotal,
   ]);
-
-  const applicableDiscounts = (storeDiscount?.status === 1 ? storeDiscount.off : []).filter((d) => {
-    const orderType = d.order_type?.toLowerCase();
-    return (
-      d.active === 1 &&
-      (orderType === mode?.toLowerCase() || orderType === 'both') &&
-      parseFloat(d.eligible_amount || 0) <= subtotal
-    );
-  });
-
-  const applicableOffers = (storeOffer?.status === 1 ? storeOffer.offer_list : []).filter((o) => {
-    return o.active === 1 && parseFloat(o.eligible_amount || 0) <= subtotal;
-  });
 
   const increaseQty = (id, currentQty) => {
     dispatch(updateItemQuantity({ itemId: id, quantity: currentQty + 1 }));
@@ -269,7 +257,6 @@ export default function CartScreen() {
       };
 
       const response = await checkUserPhone(payload);
-      // console.log('response checkUserPhone', response);
       return response;
     } catch (error) {
       console.error('checkUserPhone error:', error);
@@ -309,7 +296,7 @@ export default function CartScreen() {
       // 1) Send OTP + register number on backend
       const response = await callCheckUserPhone(trimmed);
 
-      console.log("callCheckUserPhone", response)
+      console.log('callCheckUserPhone', response);
 
       if (response?.status === 'success') {
         // 2) Build updated user (still unverified)
@@ -344,14 +331,10 @@ export default function CartScreen() {
         setOtpError('');
         setNumberVrificationOTPModalVisible(true);
       } else {
-        const msg =
-          response?.msg ||
-          'Failed to verify number. Please try again.';
+        const msg = response?.msg || 'Failed to verify number. Please try again.';
 
         // Special handling: max OTP request limit reached
-        if (
-          msg.toLowerCase().includes('maximum number of otp requests')
-        ) {
+        if (msg.toLowerCase().includes('maximum number of otp requests')) {
           // Close phone modal, show info popup
           setNumberVrificationModalVisible(false);
         }
@@ -481,14 +464,10 @@ export default function CartScreen() {
               setOtpError('');
               setNumberVrificationOTPModalVisible(true);
             } else {
-              const msg =
-                resp?.msg ||
-                'Failed to send OTP. Please try again.';
+              const msg = resp?.msg || 'Failed to send OTP. Please try again.';
 
               // Special handling: max OTP request reached
-              if (
-                msg.toLowerCase().includes('maximum number of otp requests')
-              ) {
+              if (msg.toLowerCase().includes('maximum number of otp requests')) {
                 // Just show message, do not open OTP modal
               }
 
@@ -532,18 +511,18 @@ export default function CartScreen() {
         return;
       }
 
-
       const minAmount = getMinOrderAmount();
       if (subtotal < minAmount) {
         setShowMinOrderPopup(true);
         return;
       }
 
-      const hasAvailableDiscounts = storeDiscount?.status === 1 && storeDiscount.off?.length > 0;
-      const hasAvailableOffers = storeOffer?.status === 1 && storeOffer.offer_list?.length > 0;
-
+      // ✅ New: if there are applicable discounts/offers for this mode & subtotal
+      // and user hasn't selected any, show confirmation popup.
       const shouldPromptForDiscountOrOffer =
-        (hasAvailableDiscounts || hasAvailableOffers) && !storeSelectedDiscountId && !storeSelectedOfferId;
+        (applicableDiscounts.length > 0 || applicableOffers.length > 0) &&
+        !storeSelectedDiscountId &&
+        !storeSelectedOfferId;
 
       if (shouldPromptForDiscountOrOffer) {
         setShowNoOfferDiscountPopup(true);
@@ -681,6 +660,23 @@ export default function CartScreen() {
               </RadioButton.Group>
             </View>
           )}
+
+          {/* Remove button:
+              - only when discounts AND offers are available
+              - and user has selected either discount or offer */}
+          {applicableDiscounts.length > 0 &&
+            applicableOffers.length > 0 &&
+            (storeSelectedDiscountId || storeSelectedOfferId) && (
+              <TouchableOpacity
+                style={styles.clearSelectionButton}
+                onPress={() => {
+                  dispatch(setSelectedRestaurantOfferId(''));
+                  dispatch(setSelectedRestaurantDiscountId(''));
+                }}
+              >
+                <Text style={styles.clearSelectionText}>Remove</Text>
+              </TouchableOpacity>
+            )}
         </ScrollView>
       )}
 
@@ -1017,5 +1013,20 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: 14,
     fontWeight: '600',
+  },
+
+  clearSelectionButton: {
+    marginTop: 8,
+    alignSelf: 'flex-end',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  clearSelectionText: {
+    fontSize: 12,
+    color: COLORS.primary,
+    fontWeight: '500',
   },
 });
