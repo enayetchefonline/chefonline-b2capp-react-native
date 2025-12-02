@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { Modal, RadioButton, Snackbar } from 'react-native-paper';
+import RenderHTML from 'react-native-render-html';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
 import CustomPopUp from '../../../components/ui/CustomPopUp';
@@ -39,7 +40,9 @@ export default function CartScreen() {
   const router = useRouter();
 
   // 👇 get screen height to control the items area's max height
-  const { height: screenHeight } = useWindowDimensions();
+  // const { height: screenHeight } = useWindowDimensions();
+  const { height: screenHeight, width: screenWidth } = useWindowDimensions();
+
 
   const [showMinOrderPopup, setShowMinOrderPopup] = useState(false);
   const [showNoOfferDiscountPopup, setShowNoOfferDiscountPopup] = useState(false);
@@ -559,6 +562,23 @@ export default function CartScreen() {
     return p.replace(/(\d{3})\d+(\d{2})/, '$1******$2');
   })();
 
+
+  const renderHtml = (htmlString) => {
+    if (!htmlString) return null;
+
+    return (
+      <RenderHTML
+        contentWidth={screenWidth - 100}   // adjusts based on your layout
+        source={{ html: htmlString }}
+        baseStyle={{
+          color: COLORS.text,
+          fontSize: 14,
+        }}
+      />
+    );
+  };
+
+
   return (
     <View style={styles.container}>
       {cartItems.length === 0 ? (
@@ -629,10 +649,13 @@ export default function CartScreen() {
                     <View style={styles.radioButtonWrapper}>
                       <RadioButton value={d.discount_id} color={COLORS.primary} uncheckedColor="#888" />
                     </View>
-                    <Text style={styles.radioLabel}>
-                      {d.discount_title} - {d.discount_description}
-                    </Text>
+
+                    <View style={{ flex: 1 }}>
+                      {renderHtml(d.discount_title)}
+                      {renderHtml(d.discount_description)}
+                    </View>
                   </View>
+
                 ))}
               </RadioButton.Group>
             </View>
@@ -654,8 +677,13 @@ export default function CartScreen() {
                     <View style={styles.radioButtonWrapper}>
                       <RadioButton value={o.id} color={COLORS.primary} uncheckedColor="#888" />
                     </View>
-                    <Text style={styles.radioLabel}>{o.offer_title}</Text>
+
+                    <View style={{ flex: 1 }}>
+                      {renderHtml(o.offer_title)}
+                      {renderHtml(o.offer_description)}
+                    </View>
                   </View>
+
                 ))}
               </RadioButton.Group>
             </View>

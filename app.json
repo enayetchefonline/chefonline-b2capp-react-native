@@ -67,7 +67,7 @@
     "scheme": "chefonline",
     "slug": "chefonline",
     "userInterfaceStyle": "automatic",
-    "version": "8.21",
+    "version": "9.0.3",
     "web": {
       "bundler": "metro",
       "favicon": "./assets/images/favicon.png",
