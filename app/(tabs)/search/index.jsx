@@ -19,7 +19,7 @@ import {
 import { Snackbar } from 'react-native-paper';
 import Swiper from 'react-native-swiper';
 import { Ionicons } from 'react-native-vector-icons';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import CustomButton from '../../../components/ui/CustomButton';
 import Colors from '../../../constants/color';
 import { cuisineListApi, getSliderImageApi, searchRestaurantsApi } from '../../../lib/api';
@@ -59,6 +59,8 @@ export default function SearchScreen() {
 	const [visibleSnackBar, setVisibleSnackBar] = useState(false);
 	const [snackBarMessage, setSnackBarMessage] = useState('');
 
+	const storeRestaurantList = useSelector((state) => state.restaurantList.restaurantList);
+
 	useEffect(() => {
 		fetchCuisineList();
 		getSliderImage();
@@ -87,7 +89,7 @@ export default function SearchScreen() {
 
 			// ==== FOR PRODUCTION, COMMENT OUT THE ABOVE BLOCK AND UNCOMMENT BELOW ====
 
-			let {status} = await Location.requestForegroundPermissionsAsync();
+			let { status } = await Location.requestForegroundPermissionsAsync();
 			if (status !== 'granted') {
 				setSnackBarMessage('Permission to access location was denied');
 				setVisibleSnackBar(true);
@@ -138,8 +140,6 @@ export default function SearchScreen() {
 			pageNo: 1,
 		};
 
-		// console.log("search result", data)
-
 		try {
 			const response = await searchRestaurantsApi(data);
 
@@ -147,28 +147,65 @@ export default function SearchScreen() {
 				if (response.app[0]?.status === 'Failed') {
 					setSnackBarMessage(`We found 0 restaurant in ${restaurantName}`.toUpperCase());
 					setVisibleSnackBar(true);
-					// setSearchResult([]);
 					dispatch(setRestaurantList([]));
-					return {success: false};
+					return { success: false };
 				} else {
-					dispatch(setRestaurantList(response.app));
-					// setSearchResult(response.app);
-					return {success: true, data: response.app};
+					dispatch(setRestaurantList(response.app));   // 🔹 store page 1 in Redux
+					return { success: true, data: response.app };
 				}
 			} else {
 				setSnackBarMessage('Invalid response format');
 				setVisibleSnackBar(true);
-				// setSearchResult([]);
-				return {success: false};
+				return { success: false };
 			}
 		} catch (error) {
 			console.error('Search error:', error);
 			setSnackBarMessage('Something went wrong while searching');
 			setVisibleSnackBar(true);
-			// setSearchResult([]);
-			return {success: false};
+			return { success: false };
 		}
 	};
+
+
+	// const fetchSearchRestaurant = async () => {
+	// 	const data = {
+	// 		searchText: restaurantName,
+	// 		cuisineType: selectedCuisine || 'all',
+	// 		orderType: activeTab,
+	// 		pageNo: 1,
+	// 	};
+
+	// 	// console.log("search result", data)
+
+	// 	try {
+	// 		const response = await searchRestaurantsApi(data);
+
+	// 		if (response?.app && Array.isArray(response.app)) {
+	// 			if (response.app[0]?.status === 'Failed') {
+	// 				setSnackBarMessage(`We found 0 restaurant in ${restaurantName}`.toUpperCase());
+	// 				setVisibleSnackBar(true);
+	// 				// setSearchResult([]);
+	// 				dispatch(setRestaurantList([]));
+	// 				return {success: false};
+	// 			} else {
+	// 				dispatch(setRestaurantList(response.app));
+	// 				// setSearchResult(response.app);
+	// 				return {success: true, data: response.app};
+	// 			}
+	// 		} else {
+	// 			setSnackBarMessage('Invalid response format');
+	// 			setVisibleSnackBar(true);
+	// 			// setSearchResult([]);
+	// 			return {success: false};
+	// 		}
+	// 	} catch (error) {
+	// 		console.error('Search error:', error);
+	// 		setSnackBarMessage('Something went wrong while searching');
+	// 		setVisibleSnackBar(true);
+	// 		// setSearchResult([]);
+	// 		return {success: false};
+	// 	}
+	// };
 
 	const handleFindRestaurant = async () => {
 		setIsLoading(true);
@@ -178,8 +215,13 @@ export default function SearchScreen() {
 		dispatch(setOrderType(activeTab));
 
 		const result = await fetchSearchRestaurant(); // Wait for result
+		// console.log("............... first search", JSON.stringify(result))
 		if (result?.success) {
-			router.push(`/search/restaurants/?searchResult=${JSON.stringify(result.data)}`);
+			// console.log("fist store", storeRestaurantList.length)
+			// dispatch(setRestaurantList(result.data));
+			// console.log("stored.....", storeRestaurantList.map((rest) => rest?.rest_id))
+			// router.push(`/search/restaurants/?searchResult=${JSON.stringify(result.data)}`);
+			router.push(`/search/restaurants`);
 		}
 
 		setIsLoading(false);
@@ -207,8 +249,8 @@ export default function SearchScreen() {
 								showsPagination={true}
 								dotColor="#ccc"
 								activeDotColor="#EC1839"
-								style={{borderRadius: 10}}
-								paginationStyle={{top: 165}}
+								style={{ borderRadius: 10 }}
+								paginationStyle={{ top: 165 }}
 							>
 								{sliderImage.map((img, idx) => (
 									<Image
@@ -258,7 +300,7 @@ export default function SearchScreen() {
 										name="my-location"
 										size={22}
 										color={locationLoading ? '#ccc' : '#EC1839'}
-										style={{paddingLeft: 8}}
+										style={{ paddingLeft: 8 }}
 									/>
 								</TouchableOpacity>
 							</View>
@@ -344,7 +386,7 @@ export default function SearchScreen() {
 						}}
 					>
 						{/* Force upper case here */}
-						<Text style={{color: '#fff'}}>{snackBarMessage.toUpperCase()}</Text>
+						<Text style={{ color: '#fff' }}>{snackBarMessage.toUpperCase()}</Text>
 					</Snackbar>
 				</View>
 			</ScrollView>

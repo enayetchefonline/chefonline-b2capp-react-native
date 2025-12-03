@@ -87,6 +87,7 @@ export default function CheckoutScreen() {
 	const availablePaymentMethods = useSelector((state) => state.restaurantDetail.payment_options);
 
 	console.log("auth user", authUser)
+	console.log("availablePaymentMethods", availablePaymentMethods)
 
 
 
