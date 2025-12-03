@@ -30,7 +30,7 @@ const GOOGLE_CLIENT_ID = '129487390256-u084ovr3h7hpla4i742pjkjsatpf900n.apps.goo
 
 export default function LoginScreen() {
 	const router = useRouter();
-	const {redirect} = useLocalSearchParams();
+	const { redirect } = useLocalSearchParams();
 	const [redirectUrl, setRedirectUrl] = useState(null);
 	const [loading, setLoading] = useState(false);
 	const [email, setEmail] = useState('');
@@ -60,13 +60,13 @@ export default function LoginScreen() {
 			if (response?.type === 'success') {
 				try {
 					setLoading(true);
-					const {authentication} = response;
+					const { authentication } = response;
 					const accessToken = authentication?.accessToken ?? '';
 					const idToken = authentication?.idToken ?? '';
 
 					// Fetch user info from Google
 					const profile = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-						headers: {Authorization: `Bearer ${accessToken}`},
+						headers: { Authorization: `Bearer ${accessToken}` },
 					}).then((r) => r.json());
 
 					const userDetails = {
@@ -84,7 +84,7 @@ export default function LoginScreen() {
 					const ip = await getUserIp();
 					await AsyncStorage.setItem('userIp', ip);
 
-					dispatch(setUser({user: userDetails, token: idToken || accessToken, ip}));
+					dispatch(setUser({ user: userDetails, token: idToken || accessToken, ip }));
 
 					router.replace(redirectUrl || '/profile');
 					setRedirectUrl(null);
@@ -168,7 +168,7 @@ export default function LoginScreen() {
 			console.log("user info", response)
 
 			if (response?.status === 'Success' && response?.UserDetails?.access_token) {
-				const {access_token, ...userDetails} = response.UserDetails;
+				const { access_token, ...userDetails } = response.UserDetails;
 
 				await AsyncStorage.setItem('accessToken', access_token);
 				await AsyncStorage.setItem('userData', JSON.stringify(userDetails));
@@ -182,7 +182,7 @@ export default function LoginScreen() {
 					await AsyncStorage.removeItem('rememberedPassword');
 				}
 
-				dispatch(setUser({user: userDetails, token: access_token, ip}));
+				dispatch(setUser({ user: userDetails, token: access_token, ip }));
 				router.replace(redirectUrl || '/profile');
 			} else {
 				Alert.alert('Login Failed', 'Invalid credentials or missing token.');
@@ -197,7 +197,7 @@ export default function LoginScreen() {
 
 	if (checkingLogin) {
 		return (
-			<View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+			<View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
 				<ActivityIndicator size="large" color={Colors.primary} />
 			</View>
 		);
@@ -205,7 +205,7 @@ export default function LoginScreen() {
 
 	return (
 		<KeyboardAvoidingView
-			style={{flex: 1}}
+			style={{ flex: 1 }}
 			behavior={Platform.OS === 'ios' ? 'padding' : undefined}
 			keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
 		>
@@ -246,10 +246,16 @@ export default function LoginScreen() {
 						</View>
 
 						<TouchableOpacity
-							style={[styles.button, {flexDirection: 'row', justifyContent: 'center'}]}
+							style={[
+								styles.button,
+								{ flexDirection: 'row', justifyContent: 'center' },
+								// optional: make it look disabled
+								(!email.trim() || !password.trim() || loading) && { opacity: 0.6 },
+							]}
 							onPress={handleLogin}
-							disabled={loading}
+							disabled={loading || !email.trim() || !password.trim()}
 						>
+
 							{loading ? (
 								<ActivityIndicator size="small" color="#fff" />
 							) : (
@@ -311,7 +317,7 @@ const styles = StyleSheet.create({
 		borderRadius: 8,
 		padding: 20,
 		shadowColor: '#000',
-		shadowOffset: {width: 0, height: 2},
+		shadowOffset: { width: 0, height: 2 },
 		shadowOpacity: 0.1,
 		shadowRadius: 4,
 		elevation: 10,
@@ -352,13 +358,13 @@ const styles = StyleSheet.create({
 		borderRadius: 6,
 		alignItems: 'center',
 	},
-	buttonText: {color: '#fff', fontWeight: 'bold', fontSize: 16},
-	forgotText: {color: Colors.primary, marginTop: 16, textAlign: 'center'},
-	registerText: {marginTop: 10, color: Colors.text, textAlign: 'center'},
-	registerLink: {color: Colors.primary, fontWeight: 'bold'},
-	rememberRow: {flexDirection: 'row', alignItems: 'center', marginBottom: 16},
-	checkbox: {marginRight: 8},
-	rememberText: {color: Colors.text, fontSize: 14},
+	buttonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+	forgotText: { color: Colors.primary, marginTop: 16, textAlign: 'center' },
+	registerText: { marginTop: 10, color: Colors.text, textAlign: 'center' },
+	registerLink: { color: Colors.primary, fontWeight: 'bold' },
+	rememberRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+	checkbox: { marginRight: 8 },
+	rememberText: { color: Colors.text, fontSize: 14 },
 	socialButton: {
 		height: 48,
 		borderRadius: 6,
@@ -366,6 +372,6 @@ const styles = StyleSheet.create({
 		justifyContent: 'center',
 		flexDirection: 'row',
 	},
-	socialIcon: {marginRight: 8},
-	socialText: {color: '#fff', fontWeight: '600', fontSize: 15},
+	socialIcon: { marginRight: 8 },
+	socialText: { color: '#fff', fontWeight: '600', fontSize: 15 },
 });

@@ -19,7 +19,7 @@ import {
 import { Snackbar } from 'react-native-paper';
 import Swiper from 'react-native-swiper';
 import { Ionicons } from 'react-native-vector-icons';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import CustomButton from '../../../components/ui/CustomButton';
 import Colors from '../../../constants/color';
 import { cuisineListApi, getSliderImageApi, searchRestaurantsApi } from '../../../lib/api';
@@ -59,7 +59,28 @@ export default function SearchScreen() {
 	const [visibleSnackBar, setVisibleSnackBar] = useState(false);
 	const [snackBarMessage, setSnackBarMessage] = useState('');
 
-	const storeRestaurantList = useSelector((state) => state.restaurantList.restaurantList);
+	// const storeRestaurantList = useSelector((state) => state.restaurantList.restaurantList);
+
+	// ✅ Simple UK postcode regex (covers standard formats)
+	const UK_POSTCODE_REGEX =
+		/^(([Gg][Ii][Rr]\s?0[Aa]{2})|((([A-Za-z][0-9]{1,2})|(([A-Za-z][A-Ha-hJ-Yj-y][0-9]{1,2})|(([A-Za-z][0-9][A-Za-z])|([A-Za-z][A-Ha-hJ-Yj-y][0-9][A-Za-z]?))))\s?[0-9][A-Za-z]{2}))$/;
+
+	// ✅ Auto-format UK postcode: remove spaces, uppercase, add single space before last 3 chars
+	const formatUkPostcode = (value) => {
+		if (!value) return '';
+		const trimmed = value.trim().toUpperCase().replace(/\s+/g, '');
+		if (trimmed.length <= 3) return trimmed; // not enough to format
+		return `${trimmed.slice(0, trimmed.length - 3)} ${trimmed.slice(-3)}`;
+	};
+
+	// ✅ Decide if a string "looks like" a postcode (contains digit + reasonable length)
+	const looksLikePostcode = (value) => {
+		if (!value) return false;
+		const trimmed = value.trim().replace(/\s+/g, '');
+		// basic heuristic: must contain at least 1 digit and length between 5–8
+		return /\d/.test(trimmed) && trimmed.length >= 5 && trimmed.length <= 8;
+	};
+
 
 	useEffect(() => {
 		fetchCuisineList();
@@ -208,24 +229,51 @@ export default function SearchScreen() {
 	// };
 
 	const handleFindRestaurant = async () => {
+		// ✅ Get clean input
+		const rawInput = (restaurantName || '').trim();
+
+		// ✅ Minimum length check (fixes "E" case)
+		if (rawInput.length <= 1) {
+			setSnackBarMessage('Please enter your Postcode/Town/Restaurant name');
+			setVisibleSnackBar(true);
+			return;
+		}
+
+		// ✅ Decide if we should treat it as postcode
+		let finalSearchText = rawInput;
+
+		if (looksLikePostcode(rawInput)) {
+			// Auto-format like "E16SS" -> "E1 6SS"
+			const formatted = formatUkPostcode(rawInput);
+
+			// Validate against UK postcode pattern
+			if (!UK_POSTCODE_REGEX.test(formatted)) {
+				setSnackBarMessage('Please enter a valid UK postcode (e.g. E1 6SS)');
+				setVisibleSnackBar(true);
+				return; // ❌ Do NOT call API
+			}
+
+			// Use formatted in UI + Redux
+			finalSearchText = formatted;
+			setRestaurantName(formatted);
+		}
+
 		setIsLoading(true);
+
+		// 🔹 Keep your existing Redux logic, just use finalSearchText
 		dispatch(clearRestaurantList());
-		dispatch(setSearchText(restaurantName));
+		dispatch(setSearchText(finalSearchText));
 		dispatch(setCuisine(selectedCuisine || 'all'));
 		dispatch(setOrderType(activeTab));
 
-		const result = await fetchSearchRestaurant(); // Wait for result
-		// console.log("............... first search", JSON.stringify(result))
+		const result = await fetchSearchRestaurant(); // still uses restaurantName internally
 		if (result?.success) {
-			// console.log("fist store", storeRestaurantList.length)
-			// dispatch(setRestaurantList(result.data));
-			// console.log("stored.....", storeRestaurantList.map((rest) => rest?.rest_id))
-			// router.push(`/search/restaurants/?searchResult=${JSON.stringify(result.data)}`);
 			router.push(`/search/restaurants`);
 		}
 
 		setIsLoading(false);
 	};
+
 
 	const handleCuisineSelect = (cuisine) => {
 		setSelectedCuisine(cuisine);
