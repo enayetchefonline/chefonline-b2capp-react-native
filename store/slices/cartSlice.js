@@ -1,5 +1,5 @@
 // slices/cartSlice.js
-import {createSlice} from '@reduxjs/toolkit';
+import { createSlice } from '@reduxjs/toolkit';
 
 const cartSlice = createSlice({
 	name: 'cart',
@@ -28,18 +28,41 @@ const cartSlice = createSlice({
 	reducers: {
 		addItemToCart: (state, action) => {
 			const item = action.payload;
-			const existingItem = state.items[item.dish_id];
+			if (!item) return;
+
+			const id = item.dish_id;
+			if (!id) return;
+
+			// ⭐ SPECIAL CASE: CARRY BAG
+			if (id === 'carry_bag') {
+				// If carry_bag DOES NOT exist -> add it with quantity 1
+				if (!state.items[id]) {
+					state.items[id] = {
+						item,
+						quantity: 1,
+					};
+				} else {
+					// If it already exists -> DO NOT increment quantity
+					// (optional) keep latest price/name from API
+					state.items[id].item = item;
+				}
+				return;
+			}
+
+			// 🔁 NORMAL ITEMS
+			const existingItem = state.items[id];
 			if (existingItem) {
 				existingItem.quantity += 1;
 			} else {
-				state.items[item.dish_id] = {
+				state.items[id] = {
 					item,
 					quantity: 1,
 				};
 			}
 		},
+
 		updateItemQuantity: (state, action) => {
-			const {itemId, quantity} = action.payload;
+			const { itemId, quantity } = action.payload;
 			if (quantity < 1) {
 				delete state.items[itemId];
 			} else if (state.items[itemId]) {
@@ -98,7 +121,7 @@ const cartSlice = createSlice({
 			state.order_mode = action.payload;
 		},
 		setDeliveryInfo: (state, action) => {
-			const {address, city, postcode} = action.payload;
+			const { address, city, postcode } = action.payload;
 			state.address = address;
 			state.city = city;
 			state.postcode = postcode;

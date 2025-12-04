@@ -22,6 +22,7 @@ export default function OrderSuccessScreen() {
 			dispatch(clearRestaurantDetail());
 			router.replace('/(tabs)/search');
 		} else {
+			// dispatch(clearRestaurantList());
 			router.replace('/(tabs)/cart');
 		}
 	};

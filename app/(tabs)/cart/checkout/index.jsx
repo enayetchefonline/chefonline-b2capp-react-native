@@ -439,21 +439,23 @@ export default function CheckoutScreen() {
 					},
 				});
 			} else if (response.status === 'Failure') {
+				
 				setVerificationCodePopupVisible(false);
-				router.push({
-					pathname: '/order-success',
-					params: {
-						orderId: response.order_ID,
-						status: response.status,
-						message: response.msg,
-						transactionId: response.transaction_id,
-						items: JSON.stringify(itemList),
-						discount: discountVal.toFixed(2),
-						carrybag: carryBagTotal.toFixed(2),
-						delivery: deliveryCharge.toFixed(2),
-						total: finalTotalWithCarryBag.toFixed(2),
-					},
-				});
+				alert(response.msg);
+				// router.push({
+				// 	pathname: '/order-success',
+				// 	params: {
+				// 		orderId: response.order_ID,
+				// 		status: response.status,
+				// 		message: response.msg,
+				// 		transactionId: response.transaction_id,
+				// 		items: JSON.stringify(itemList),
+				// 		discount: discountVal.toFixed(2),
+				// 		carrybag: carryBagTotal.toFixed(2),
+				// 		delivery: deliveryCharge.toFixed(2),
+				// 		total: finalTotalWithCarryBag.toFixed(2),
+				// 	},
+				// });
 			}
 		} catch {
 			setVoucherValidationMessage('Something went wrong. Please try again.');

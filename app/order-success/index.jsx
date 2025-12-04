@@ -33,6 +33,7 @@ export default function OrderSuccessScreen() {
 			// console.log("storeResturantList order success screen", storeRestaurantList)
 			router.replace('/(tabs)/search');
 		} else {
+			// dispatch(clearRestaurantList());
 			router.replace('/(tabs)/cart');
 		}
 	};

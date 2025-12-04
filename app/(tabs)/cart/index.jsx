@@ -1,6 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-// import { useCallback, useEffect, useRef, useState } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { Modal, RadioButton, Snackbar } from 'react-native-paper';
@@ -58,19 +57,18 @@ const HtmlContent = memo(function HtmlContent({ html, contentWidth }) {
   );
 });
 
-
 export default function CartScreen() {
   const dispatch = useDispatch();
   const router = useRouter();
 
   const prevItemsCountRef = useRef(0);
+  const prevHasNonCarryItemsRef = useRef(false);         // ⭐ track previous non-carry state
+  const autoCarryBagRequestedRef = useRef(false);        // ⭐ ensure only 1 auto-add per mount
 
   // 👇 get screen height to control the items area's max height
-  // const { height: screenHeight } = useWindowDimensions();
   const { height: screenHeight, width: screenWidth } = useWindowDimensions();
 
   const [carryBagDisabled, setCarryBagDisabled] = useState(false);
-
 
   const [showMinOrderPopup, setShowMinOrderPopup] = useState(false);
   const [showNoOfferDiscountPopup, setShowNoOfferDiscountPopup] = useState(false);
@@ -89,6 +87,8 @@ export default function CartScreen() {
   const storeSelectedDiscountId = useSelector((state) => state.cart.selected_discount_id);
   const storeSelectedOfferId = useSelector((state) => state.cart.selected_offer_id);
 
+  const storeCarryBag = useSelector((state) => state.cart.carryBag);
+
   const restaurant = useSelector((state) => state.restaurantDetail);
   const storeOrderType = useSelector((state) => state.cart.orderType);
 
@@ -96,6 +96,9 @@ export default function CartScreen() {
   const [restaurantScheduleStatus, setRestaurantScheduleStatus] = useState(null);
 
   const scheduleList = restaurant?.data?.restuarent_schedule?.schedule ?? [];
+
+  console.log('[CartScreen] storeItemList', JSON.stringify(storeItemList));
+  console.log("[CartScreen] carryBag", storeCarryBag)
 
   useEffect(() => {
     if (!scheduleList || scheduleList.length === 0) {
@@ -153,30 +156,40 @@ export default function CartScreen() {
 
   const hasCarryBag = !!(storeItemList && storeItemList['carry_bag']);
 
+const loadCarryBag = useCallback(
+  async () => {
+    if (!restaurantId) return;
 
-  const loadCarryBag = useCallback(
-    async () => {
-      try {
-        const response = await carrierBag({ restId: restaurantId });
+    // 🔒 If carry bag already in cart, don't call API or re-add
+    if (hasCarryBag) {
+      console.log('[CarryBag] Already in cart, skipping API + addItemToCart');
+      return;
+    }
 
-        if (response?.restaurant_service_id && parseFloat(response.price) > 0) {
-          const bagId = 'carry_bag';
+    try {
+      console.log('[CarryBag] loadCarryBag called with restId:', restaurantId);
+      const response = await carrierBag({ restId: restaurantId });
+      console.log('[CarryBag] API response:', response);
 
-          const carryBagItem = {
-            dish_id: bagId,
-            dish_name: 'Carry Bag',
-            dish_price: response.price,
-          };
+      if (response?.restaurant_service_id && parseFloat(response.price) > 0) {
+        const carryBagItem = {
+          dish_id: 'carry_bag',
+          dish_name: 'Carry Bag',
+          dish_price: response.price,
+        };
 
-          dispatch(setCarryBag(response));
-          dispatch(addItemToCart(carryBagItem));
-        }
-      } catch (err) {
-        console.error('❌ Failed to load carry bag:', err);
+        console.log('[CarryBag] Dispatching setCarryBag + addItemToCart for carry_bag');
+        dispatch(setCarryBag(response));
+        dispatch(addItemToCart(carryBagItem));
+      } else {
+        console.log('[CarryBag] No valid carry bag returned from API:', response);
       }
-    },
-    [restaurantId, dispatch]
-  );
+    } catch (err) {
+      console.error('❌ Failed to load carry bag:', err);
+    }
+  },
+  [restaurantId, dispatch, hasCarryBag]
+);
 
 
   // 👉 Load carry bag when restaurant & cart items exist
@@ -186,21 +199,65 @@ export default function CartScreen() {
   // - user did NOT manually remove carry bag
   // - there is at least 1 non-carry-bag item
   // - carry bag is not already in cart
-  useEffect(() => {
-    if (!restaurantId) return;
-    if (carryBagDisabled) return;
+  // - and we haven't already requested auto-add in this mount
+useEffect(() => {
+  if (!restaurantId) return;
+  if (carryBagDisabled) {
+    console.log('[CarryBagEffect] carryBagDisabled = true, skipping auto-add.');
+    return;
+  }
 
-    if (hasNonCarryItems && !hasCarryBag) {
-      loadCarryBag();
-    }
-  }, [restaurantId, hasNonCarryItems, hasCarryBag, carryBagDisabled, loadCarryBag]);
+  const hadNonCarryBefore = prevHasNonCarryItemsRef.current;
+  const hasNonCarryNow = hasNonCarryItems;
 
+  console.log(
+    '[CarryBagEffect] restaurantId:',
+    restaurantId,
+    '| hadNonCarryBefore:',
+    hadNonCarryBefore,
+    '| hasNonCarryNow:',
+    hasNonCarryNow,
+    '| hasCarryBag:',
+    hasCarryBag,
+    '| autoCarryBagRequested:',
+    autoCarryBagRequestedRef.current
+  );
+
+  // Only trigger when:
+  // - Previously: NO non-carry items
+  // - Now: there IS at least 1 non-carry item
+  // - There is NO carry bag yet
+  // - We HAVEN'T already auto-requested carry bag in this cart lifecycle
+  if (
+    !hadNonCarryBefore &&
+    hasNonCarryNow &&
+    !hasCarryBag &&
+    !autoCarryBagRequestedRef.current
+  ) {
+    console.log('[CarryBagEffect] Transition detected (false -> true) and no carry bag. Auto-adding carry bag.');
+    autoCarryBagRequestedRef.current = true;
+    loadCarryBag();
+  } else {
+    console.log('[CarryBagEffect] No auto-add. Condition not met.');
+  }
+
+  // update ref for next render
+  prevHasNonCarryItemsRef.current = hasNonCarryNow;
+
+  // Optional: reset auto flag if cart becomes empty & no carry bag
+  if (!hasNonCarryNow && !hasCarryBag) {
+    autoCarryBagRequestedRef.current = false;
+  }
+}, [restaurantId, hasNonCarryItems, hasCarryBag, carryBagDisabled, loadCarryBag]);
 
 
   // 👉 Only reset mode when cart becomes completely empty
   useEffect(() => {
     if (!storeItemList || Object.keys(storeItemList).length === 0) {
       setMode(null);
+      prevHasNonCarryItemsRef.current = false;
+      autoCarryBagRequestedRef.current = false; // reset when cart fully cleared
+      console.log('[CarryBagEffect] Cart emptied. Resetting refs.');
     }
   }, [storeItemList]);
 
@@ -281,15 +338,6 @@ export default function CartScreen() {
       dispatch(updateItemQuantity({ itemId: id, quantity: 0 }));
     }
   };
-
-
-  // const decreaseQty = (id, currentQty) => {
-  //   if (currentQty > 1) {
-  //     dispatch(updateItemQuantity({ itemId: id, quantity: currentQty - 1 }));
-  //   } else {
-  //     dispatch(updateItemQuantity({ itemId: id, quantity: 0 }));
-  //   }
-  // };
 
   const getMinOrderAmount = () => {
     const currentPolicy = storeOrderPolicy?.policy?.find((p) => p.policy_name === mode);
@@ -436,7 +484,6 @@ export default function CartScreen() {
         phone_no: phoneNo,
         otp: trimmedOtp,
       });
-
 
       if (resp?.status === 'success') {
         // ✅ Mark user as verified
@@ -609,7 +656,6 @@ export default function CartScreen() {
     return p.replace(/(\d{3})\d+(\d{2})/, '$1******$2');
   })();
 
-
   const renderHtml = (htmlString) => {
     if (!htmlString) return null;
 
@@ -624,9 +670,6 @@ export default function CartScreen() {
       />
     );
   };
-
-
-
 
   return (
     <View style={styles.container}>
@@ -711,18 +754,6 @@ export default function CartScreen() {
                       );
                     })()}
                   </View>
-
-
-
-                  {/* <View style={styles.itemActions}>
-                    <TouchableOpacity style={styles.qtyBtn} onPress={() => decreaseQty(item.id, item.qty)}>
-                      <Ionicons name="remove-outline" size={20} color={COLORS.primary} />
-                    </TouchableOpacity>
-                    <Text style={styles.priceText}>£{(item.price * item.qty).toFixed(2)}</Text>
-                    <TouchableOpacity style={styles.qtyBtn} onPress={() => increaseQty(item.id, item.qty)}>
-                      <Ionicons name="add-outline" size={20} color={COLORS.primary} />
-                    </TouchableOpacity>
-                  </View> */}
                 </View>
               ))}
             </ScrollView>
@@ -734,6 +765,7 @@ export default function CartScreen() {
               <Text style={styles.sectionTitle}>Available Discounts</Text>
               <RadioButton.Group
                 onValueChange={(value) => {
+                  console.log('[Discount] selected discount_id:', value);
                   dispatch(setSelectedRestaurantDiscountId(value));
                   dispatch(setSelectedRestaurantOfferId(''));
                 }}
@@ -749,9 +781,7 @@ export default function CartScreen() {
                       <HtmlContent html={d.discount_title} contentWidth={screenWidth - 100} />
                       <HtmlContent html={d.discount_description} contentWidth={screenWidth - 100} />
                     </View>
-
                   </View>
-
                 ))}
               </RadioButton.Group>
             </View>
@@ -763,6 +793,7 @@ export default function CartScreen() {
               <Text style={styles.sectionTitle}>Available Offers</Text>
               <RadioButton.Group
                 onValueChange={(value) => {
+                  console.log('[Offer] selected offer_id:', value);
                   dispatch(setSelectedRestaurantOfferId(value));
                   dispatch(setSelectedRestaurantDiscountId(''));
                 }}
@@ -778,9 +809,7 @@ export default function CartScreen() {
                       <HtmlContent html={o.offer_title} contentWidth={screenWidth - 100} />
                       <HtmlContent html={o.offer_description} contentWidth={screenWidth - 100} />
                     </View>
-
                   </View>
-
                 ))}
               </RadioButton.Group>
             </View>
@@ -1014,13 +1043,6 @@ const styles = StyleSheet.create({
   },
   itemText: { flex: 1, fontSize: 14, color: COLORS.text },
   itemActions: { flexDirection: 'row', alignItems: 'center' },
-  // qtyBtn: {
-  //   borderWidth: 1,
-  //   borderColor: COLORS.primary,
-  //   borderRadius: 4,
-  //   padding: 4,
-  //   marginHorizontal: 6,
-  // },
   qtyBtn: {
     borderWidth: 1,
     borderColor: COLORS.primary,
