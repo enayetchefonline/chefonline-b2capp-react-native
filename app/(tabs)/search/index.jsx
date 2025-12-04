@@ -182,7 +182,7 @@ export default function SearchScreen() {
 					return { success: false };
 				} else {
 					dispatch(setRestaurantList([]));
-					console.log("bank store ......")
+					// console.log("bank store ......")
 					dispatch(setRestaurantList(response.app));   // 🔹 store page 1 in Redux
 					return { success: true, data: response.app };
 				}
@@ -274,9 +274,9 @@ export default function SearchScreen() {
 
 		// 🔹 Keep your existing Redux logic, just use finalSearchText
 		dispatch(clearRestaurantList());
-		console.log("blank store 2")
+		// console.log("blank store 2")
 		dispatch(setRestaurantList([]));  // to clear previous search results
-		console.log("blank store 3")
+		// console.log("blank store 3")
 		dispatch(setSearchText(finalSearchText));
 		dispatch(setCuisine(selectedCuisine || 'all'));
 		dispatch(setOrderType(activeTab));

@@ -51,10 +51,10 @@ export default function RestaurantListScreen() {
   const [selectedRestaurantId, setSelectedRestaurantId] = useState(null);
   const [showClosedPopup, setShowClosedPopup] = useState(false);
 
-  console.log(
-    'storeRestaurantList.........',
-    storeRestaurantList.map((rest) => rest?.rest_id)
-  );
+  // console.log(
+  //   'storeRestaurantList.........',
+  //   storeRestaurantList.map((rest) => rest?.rest_id)
+  // );
 
   // 🔄 Reset pagination state whenever search filters change
   useEffect(() => {
@@ -113,7 +113,7 @@ export default function RestaurantListScreen() {
     }
 
     const scheduleList = restaurant?.restuarent_schedule?.schedule || [];
-    console.log('rest schedulelist', JSON.stringify(scheduleList));
+    // console.log('rest schedulelist', JSON.stringify(scheduleList));
     const status = getRestaurantScheduleStatus(scheduleList, getCurrentApiDateTimeObj());
 
     // If you want to block closed restaurants (except reservation), uncomment:

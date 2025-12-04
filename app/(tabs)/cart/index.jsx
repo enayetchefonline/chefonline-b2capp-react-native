@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+// import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { Modal, RadioButton, Snackbar } from 'react-native-paper';
 import RenderHTML from 'react-native-render-html';
@@ -34,6 +35,29 @@ const COLORS = {
   shadow: '#000000',
   secondaryText: '#ccc',
 };
+
+const HtmlContent = memo(function HtmlContent({ html, contentWidth }) {
+  const source = useMemo(() => ({ html }), [html]);
+
+  const baseStyle = useMemo(
+    () => ({
+      color: COLORS.text,
+      fontSize: 14,
+    }),
+    []
+  );
+
+  if (!html) return null;
+
+  return (
+    <RenderHTML
+      contentWidth={contentWidth}
+      source={source}
+      baseStyle={baseStyle}
+    />
+  );
+});
+
 
 export default function CartScreen() {
   const dispatch = useDispatch();
@@ -72,9 +96,6 @@ export default function CartScreen() {
   const [restaurantScheduleStatus, setRestaurantScheduleStatus] = useState(null);
 
   const scheduleList = restaurant?.data?.restuarent_schedule?.schedule ?? [];
-
-  console.log('storeSelectedDiscountId', storeSelectedDiscountId);
-  console.log('storeSelectedOfferId', storeSelectedOfferId);
 
   useEffect(() => {
     if (!scheduleList || scheduleList.length === 0) {
@@ -197,9 +218,6 @@ export default function CartScreen() {
     return o.active === 1 && parseFloat(o.eligible_amount || 0) <= subtotal;
   });
 
-  console.log('applicableDiscounts', applicableDiscounts);
-  console.log('applicableOffers', applicableOffers);
-
   // 👉 Handle:
   // 1) Auto-select single policy
   // 2) Auto-select discount only when discounts exist and no offers
@@ -252,12 +270,26 @@ export default function CartScreen() {
   };
 
   const decreaseQty = (id, currentQty) => {
+    // 🚫 Do not allow carry bag to go below 1
+    if (id === 'carry_bag' && currentQty <= 1) {
+      return;
+    }
+
     if (currentQty > 1) {
       dispatch(updateItemQuantity({ itemId: id, quantity: currentQty - 1 }));
     } else {
       dispatch(updateItemQuantity({ itemId: id, quantity: 0 }));
     }
   };
+
+
+  // const decreaseQty = (id, currentQty) => {
+  //   if (currentQty > 1) {
+  //     dispatch(updateItemQuantity({ itemId: id, quantity: currentQty - 1 }));
+  //   } else {
+  //     dispatch(updateItemQuantity({ itemId: id, quantity: 0 }));
+  //   }
+  // };
 
   const getMinOrderAmount = () => {
     const currentPolicy = storeOrderPolicy?.policy?.find((p) => p.policy_name === mode);
@@ -316,8 +348,6 @@ export default function CartScreen() {
     try {
       // 1) Send OTP + register number on backend
       const response = await callCheckUserPhone(trimmed);
-
-      console.log('callCheckUserPhone', response);
 
       if (response?.status === 'success') {
         // 2) Build updated user (still unverified)
@@ -407,7 +437,6 @@ export default function CartScreen() {
         otp: trimmedOtp,
       });
 
-      console.log('userPhoneVerify response', resp);
 
       if (resp?.status === 'success') {
         // ✅ Mark user as verified
@@ -586,7 +615,7 @@ export default function CartScreen() {
 
     return (
       <RenderHTML
-        contentWidth={screenWidth - 100}   // adjusts based on your layout
+        contentWidth={screenWidth - 100}
         source={{ html: htmlString }}
         baseStyle={{
           color: COLORS.text,
@@ -595,6 +624,8 @@ export default function CartScreen() {
       />
     );
   };
+
+
 
 
   return (
@@ -637,7 +668,53 @@ export default function CartScreen() {
                   <Text style={styles.itemText}>
                     {item.qty} x {item.name}
                   </Text>
+
                   <View style={styles.itemActions}>
+                    {(() => {
+                      const isCarryBag = item.id === 'carry_bag';
+                      const isCarryBagSingle = isCarryBag && item.qty === 1;
+
+                      // 🎯 Case 1: Carry bag with qty = 1 → HIDE minus button
+                      if (isCarryBagSingle) {
+                        return (
+                          <>
+                            <Text style={styles.priceText}>£{(item.price * item.qty).toFixed(2)}</Text>
+                            <TouchableOpacity
+                              style={styles.qtyBtn}
+                              onPress={() => increaseQty(item.id, item.qty)}
+                            >
+                              <Ionicons name="add-outline" size={20} color={COLORS.primary} />
+                            </TouchableOpacity>
+                          </>
+                        );
+                      }
+
+                      // 🎯 Case 2: All other items OR carry bag with qty > 1 → show minus + plus
+                      return (
+                        <>
+                          <TouchableOpacity
+                            style={styles.qtyBtn}
+                            onPress={() => decreaseQty(item.id, item.qty)}
+                          >
+                            <Ionicons name="remove-outline" size={20} color={COLORS.primary} />
+                          </TouchableOpacity>
+
+                          <Text style={styles.priceText}>£{(item.price * item.qty).toFixed(2)}</Text>
+
+                          <TouchableOpacity
+                            style={styles.qtyBtn}
+                            onPress={() => increaseQty(item.id, item.qty)}
+                          >
+                            <Ionicons name="add-outline" size={20} color={COLORS.primary} />
+                          </TouchableOpacity>
+                        </>
+                      );
+                    })()}
+                  </View>
+
+
+
+                  {/* <View style={styles.itemActions}>
                     <TouchableOpacity style={styles.qtyBtn} onPress={() => decreaseQty(item.id, item.qty)}>
                       <Ionicons name="remove-outline" size={20} color={COLORS.primary} />
                     </TouchableOpacity>
@@ -645,7 +722,7 @@ export default function CartScreen() {
                     <TouchableOpacity style={styles.qtyBtn} onPress={() => increaseQty(item.id, item.qty)}>
                       <Ionicons name="add-outline" size={20} color={COLORS.primary} />
                     </TouchableOpacity>
-                  </View>
+                  </View> */}
                 </View>
               ))}
             </ScrollView>
@@ -669,9 +746,10 @@ export default function CartScreen() {
                     </View>
 
                     <View style={{ flex: 1 }}>
-                      {renderHtml(d.discount_title)}
-                      {renderHtml(d.discount_description)}
+                      <HtmlContent html={d.discount_title} contentWidth={screenWidth - 100} />
+                      <HtmlContent html={d.discount_description} contentWidth={screenWidth - 100} />
                     </View>
+
                   </View>
 
                 ))}
@@ -697,9 +775,10 @@ export default function CartScreen() {
                     </View>
 
                     <View style={{ flex: 1 }}>
-                      {renderHtml(o.offer_title)}
-                      {renderHtml(o.offer_description)}
+                      <HtmlContent html={o.offer_title} contentWidth={screenWidth - 100} />
+                      <HtmlContent html={o.offer_description} contentWidth={screenWidth - 100} />
                     </View>
+
                   </View>
 
                 ))}
@@ -935,6 +1014,13 @@ const styles = StyleSheet.create({
   },
   itemText: { flex: 1, fontSize: 14, color: COLORS.text },
   itemActions: { flexDirection: 'row', alignItems: 'center' },
+  // qtyBtn: {
+  //   borderWidth: 1,
+  //   borderColor: COLORS.primary,
+  //   borderRadius: 4,
+  //   padding: 4,
+  //   marginHorizontal: 6,
+  // },
   qtyBtn: {
     borderWidth: 1,
     borderColor: COLORS.primary,
@@ -942,6 +1028,10 @@ const styles = StyleSheet.create({
     padding: 4,
     marginHorizontal: 6,
   },
+  qtyBtnDisabled: {
+    borderColor: '#CCCCCC',
+  },
+
   priceText: { fontSize: 14, color: COLORS.text },
 
   section: { marginBottom: 16, backgroundColor: COLORS.white, borderRadius: 8, padding: 16 },
