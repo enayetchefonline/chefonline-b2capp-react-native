@@ -1,9 +1,9 @@
-import {useLocalSearchParams} from 'expo-router';
-import {useCallback, useEffect, useState} from 'react';
-import {ActivityIndicator, FlatList, StyleSheet, Text, View} from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Colors from '../../../../../constants/color';
-import {getReview} from '../../../../../lib/api';
+import { getReview } from '../../../../../lib/api';
 
 const renderStars = (rating) => {
 	let stars = [];
@@ -22,6 +22,10 @@ const RestaurantReviewScreen = () => {
 		setLoading(true);
 		try {
 			const response = await getReview({restId: restaurantId});
+			// console.log("review response", response)
+			const filterResponse = response.data.filter(item => item.status === "1");
+			// console.log("filterResponse", filterResponse)
+			response.data = filterResponse;
 			if (response.status === 'Success' && Array.isArray(response.data)) {
 				const formatted = response.data.map((item) => ({
 					date: item.created_date,
@@ -44,6 +48,7 @@ const RestaurantReviewScreen = () => {
 	}, [restaurantId, fetchReview]);
 
 	const renderItem = ({item}) => (
+		
 		<View style={styles.reviewContainer}>
 			<Text style={styles.dateText}>{item.date}</Text>
 

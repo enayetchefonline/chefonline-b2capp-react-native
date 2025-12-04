@@ -3,18 +3,23 @@ import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
 import { clearCart } from '../../store/slices/cartSlice';
+import { clearRestaurantDetail } from '../../store/slices/restaurantDetailSlice';
+import { clearRestaurantList } from '../../store/slices/restaurantListSlice';
 
 export default function OrderSuccessScreen() {
 	const router = useRouter();
 	const dispatch = useDispatch();
-	const {status, transactionId} = useLocalSearchParams();
+	const { status, transactionId } = useLocalSearchParams();
 	const restaurantName = useSelector((state) => state.cart.restaurantName);
 	const restaurantDetails = useSelector((state) => state.restaurantDetail.data);
 	const isSuccess = status === 1 || status?.toLowerCase?.() === 'success';
 
 	const handleBackToHome = () => {
+		// console.log("back to home")
 		if (isSuccess) {
 			dispatch(clearCart());
+			dispatch(clearRestaurantList());
+			dispatch(clearRestaurantDetail());
 			router.replace('/(tabs)/search');
 		} else {
 			router.replace('/(tabs)/cart');
@@ -58,7 +63,7 @@ export default function OrderSuccessScreen() {
 
 				{/* Image with overlay text */}
 				<Image
-					source={{uri: 'https://www.chefonline.co.uk/images/order-complete.jpg'}}
+					source={{ uri: 'https://www.chefonline.co.uk/images/order-complete.jpg' }}
 					style={styles.bannerImage}
 					resizeMode="cover"
 				/>
@@ -105,7 +110,7 @@ const styles = StyleSheet.create({
 		fontSize: 14,
 		textAlign: 'center',
 	},
-	bold: {fontWeight: '700'},
+	bold: { fontWeight: '700' },
 	support: {
 		marginTop: 10,
 		fontSize: 13,

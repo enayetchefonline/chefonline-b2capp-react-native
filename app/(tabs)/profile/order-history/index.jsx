@@ -1,11 +1,11 @@
-import {useRouter} from 'expo-router';
-import {useEffect, useState} from 'react';
-import {ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View} from 'react-native';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import {useSelector} from 'react-redux';
+import { useSelector } from 'react-redux';
 import CustomButton from '../../../../components/ui/CustomButton';
 import Colors from '../../../../constants/color';
-import {getOrderList} from '../../../../lib/api';
+import { getOrderList } from '../../../../lib/api';
 
 export default function OrderHistoryScreen() {
 	const router = useRouter();
@@ -17,6 +17,8 @@ export default function OrderHistoryScreen() {
 		const fetchOrders = async () => {
 			try {
 				const response = await getOrderList({userid: authUser?.userid});
+
+				// console.log("getOrderList", JSON.stringify(response))
 
 				if (Array.isArray(response?.orders)) {
 					setOrders(response.orders);

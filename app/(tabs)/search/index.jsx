@@ -19,7 +19,7 @@ import {
 import { Snackbar } from 'react-native-paper';
 import Swiper from 'react-native-swiper';
 import { Ionicons } from 'react-native-vector-icons';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import CustomButton from '../../../components/ui/CustomButton';
 import Colors from '../../../constants/color';
 import { cuisineListApi, getSliderImageApi, searchRestaurantsApi } from '../../../lib/api';
@@ -59,7 +59,17 @@ export default function SearchScreen() {
 	const [visibleSnackBar, setVisibleSnackBar] = useState(false);
 	const [snackBarMessage, setSnackBarMessage] = useState('');
 
-	// const storeRestaurantList = useSelector((state) => state.restaurantList.restaurantList);
+	const storeRestaurantList = useSelector((state) => state.restaurantList.restaurantList);
+	const storeRestaurantDetail = useSelector((state) => state.restaurantDetail.data);
+	const storeCuisine = useSelector((state) => state.cart.cuisine);
+	const storeOrderType = useSelector((state) => state.cart.orderType);
+	const storeSearchText = useSelector((state) => state.cart.searchText);
+
+	// console.log("storeRestaurantList", storeRestaurantList)
+	// console.log("storeRestaurantDetail", storeRestaurantDetail)
+	// console.log("storeCuisine", storeCuisine)
+	// console.log("storeOrderType", storeOrderType)
+	// console.log("storeSearchText", storeSearchText)
 
 	// ✅ Simple UK postcode regex (covers standard formats)
 	const UK_POSTCODE_REGEX =
@@ -171,6 +181,8 @@ export default function SearchScreen() {
 					dispatch(setRestaurantList([]));
 					return { success: false };
 				} else {
+					dispatch(setRestaurantList([]));
+					console.log("bank store ......")
 					dispatch(setRestaurantList(response.app));   // 🔹 store page 1 in Redux
 					return { success: true, data: response.app };
 				}
@@ -262,6 +274,9 @@ export default function SearchScreen() {
 
 		// 🔹 Keep your existing Redux logic, just use finalSearchText
 		dispatch(clearRestaurantList());
+		console.log("blank store 2")
+		dispatch(setRestaurantList([]));  // to clear previous search results
+		console.log("blank store 3")
 		dispatch(setSearchText(finalSearchText));
 		dispatch(setCuisine(selectedCuisine || 'all'));
 		dispatch(setOrderType(activeTab));

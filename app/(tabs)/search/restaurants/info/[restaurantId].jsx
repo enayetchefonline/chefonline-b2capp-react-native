@@ -7,7 +7,7 @@ const RestaurantInfoScreen = () => {
 	const schedule = storeRestaurantDetail?.restuarent_schedule?.schedule || [];
 	const isReservationOn = storeRestaurantDetail?.accept_reservation === "1";
 
-	console.log("isReservationOn:", isReservationOn);
+	// console.log("isReservationOn:", isReservationOn);
 
 	return (
 		<ScrollView contentContainerStyle={styles.scrollContainer}>

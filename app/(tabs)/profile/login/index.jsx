@@ -43,7 +43,7 @@ export default function LoginScreen() {
 
 	const authUser = useSelector((state) => state.auth.user);
 
-	console.log("authUser", authUser)
+	// console.log("authUser", authUser)
 
 	// Initialize Google request (use same client for all)
 	const [request, response, promptAsync] = Google.useAuthRequest({
@@ -165,7 +165,7 @@ export default function LoginScreen() {
 			const ip = await getUserIp();
 			const response = await userLoginApi(email, password);
 
-			console.log("user info", response)
+			// console.log("user info", response)
 
 			if (response?.status === 'Success' && response?.UserDetails?.access_token) {
 				const { access_token, ...userDetails } = response.UserDetails;

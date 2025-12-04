@@ -86,8 +86,8 @@ export default function CheckoutScreen() {
 	const restaurantDetails = useSelector((state) => state.restaurantDetail.data);
 	const availablePaymentMethods = useSelector((state) => state.restaurantDetail.payment_options);
 
-	console.log("auth user", authUser)
-	console.log("availablePaymentMethods", availablePaymentMethods)
+	// console.log("auth user", authUser)
+	// console.log("availablePaymentMethods", availablePaymentMethods)
 
 
 
@@ -105,7 +105,7 @@ export default function CheckoutScreen() {
 
 	const isRestaurantOpenNow = (schedule, orderMode) => {
 		if (!Array.isArray(schedule) || schedule.length === 0) {
-			console.log("❌ Schedule is empty");
+			// console.log("❌ Schedule is empty");
 			return false;
 		}
 
@@ -115,20 +115,20 @@ export default function CheckoutScreen() {
 		const jsDay = now.getUTCDay(); // 0-6 (Sun=0)
 		const weekdayId = jsDay === 0 ? 7 : jsDay; // 1-7
 
-		console.log("🇬🇧 UK (UTC) Date & Time:", now.toISOString());
-		console.log("📅 JS UTC Day:", jsDay, "| Weekday ID (1-7):", weekdayId);
+		// console.log("🇬🇧 UK (UTC) Date & Time:", now.toISOString());
+		// console.log("📅 JS UTC Day:", jsDay, "| Weekday ID (1-7):", weekdayId);
 
 		const today = schedule.find((d) => d.weekday_id === weekdayId);
 
-		console.log("📘 Today's Schedule:", JSON.stringify(today, null, 2));
+		// console.log("📘 Today's Schedule:", JSON.stringify(today, null, 2));
 
 		if (!today) {
-			console.log("❌ No schedule found for today");
+			// console.log("❌ No schedule found for today");
 			return false;
 		}
 
 		const nowMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
-		console.log("⏱️ Current Minutes (UTC as UK):", nowMinutes);
+		// console.log("⏱️ Current Minutes (UTC as UK):", nowMinutes);
 
 		// 👉 Only consider Collection / Delivery slots for ordering
 		const normalizedMode = (orderMode || '').toLowerCase();
@@ -145,10 +145,10 @@ export default function CheckoutScreen() {
 			return true;
 		});
 
-		console.log("🎯 Slots used for open/close check:", JSON.stringify(slotsForOrdering, null, 2));
+		// console.log("🎯 Slots used for open/close check:", JSON.stringify(slotsForOrdering, null, 2));
 
 		if (slotsForOrdering.length === 0) {
-			console.log("❌ No ordering slots for this mode");
+			// console.log("❌ No ordering slots for this mode");
 			return false;
 		}
 
@@ -156,26 +156,26 @@ export default function CheckoutScreen() {
 			const open = parseTimeToMinutes(slot.opening_time);
 			const close = parseTimeToMinutes(slot.closing_time);
 
-			console.log(
-				`🔍 Slot => Open: ${slot.opening_time} (${open}), Close: ${slot.closing_time} (${close})`
-			);
+			// console.log(
+			// 	`🔍 Slot => Open: ${slot.opening_time} (${open}), Close: ${slot.closing_time} (${close})`
+			// );
 
 			if (open == null || close == null) return false;
 
 			if (close > open) {
 				// Normal hours
 				const inside = nowMinutes >= open && nowMinutes <= close;
-				console.log("  → Normal Hours Match:", inside);
+				// console.log("  → Normal Hours Match:", inside);
 				return inside;
 			}
 
 			// Cross-midnight
 			const inside = nowMinutes >= open || nowMinutes <= close;
-			console.log("  → Cross-Midnight Match:", inside);
+			// console.log("  → Cross-Midnight Match:", inside);
 			return inside;
 		});
 
-		console.log("🏁 FINAL RESULT (ordering open now?) =", isOpen);
+		// console.log("🏁 FINAL RESULT (ordering open now?) =", isOpen);
 
 		return isOpen;
 	};
@@ -187,11 +187,11 @@ export default function CheckoutScreen() {
 		setIsOrderingOpen(openNow);   // 👈 keep raw boolean
 		setOrderTiming(nextTiming);   // 👈 keep selected timing label
 
-		console.log("orderTiming (ASAP or Later)....", nextTiming);
-		console.log("isOrderingOpen (boolean)....", openNow);
+		// console.log("orderTiming (ASAP or Later)....", nextTiming);
+		// console.log("isOrderingOpen (boolean)....", openNow);
 	}, [restaurantSchedule, storeOrderMode]);
 
-	console.log("orderTiming (ASAP or Later)....", orderTiming);
+	// console.log("orderTiming (ASAP or Later)....", orderTiming);
 
 	// Convert "12:00 PM" -> minutes since midnight
 	const parseTimeToMinutes = (timeStr) => {
@@ -573,7 +573,7 @@ export default function CheckoutScreen() {
 
 
 
-		console.log("checkout payload....", JSON.stringify(payload));
+		// console.log("checkout payload....", JSON.stringify(payload));
 
 		try {
 			const response = await confirmOrder(payload);
@@ -597,7 +597,7 @@ export default function CheckoutScreen() {
 			} else if (response.status === 'sms_sent') {
 				setVerificationCodePopupVisible(true);
 				setLastOrderPayload({ ...payload });
-				console.log("order submit otp", response.code)
+				// console.log("order submit otp", response.code)
 				setVerificationCode(response.code || '');
 			} else if (response.status === 'Failed' && Object.keys(storeItemList).length > 0) {
 				setErrorMessage('Order failed. Please try again later.');

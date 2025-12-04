@@ -109,7 +109,7 @@ export default function ResetPasswordScreen() {
         newPassword: newPwd.trim(),
       });
 
-      console.log("respose resetpassowd", response)
+      // console.log("respose resetpassowd", response)
 
       if (response.status === 'Failed') {
         alert(response.msg || 'Password reset failed. Please try again.');

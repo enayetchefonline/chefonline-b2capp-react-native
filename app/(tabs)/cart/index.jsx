@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { Modal, RadioButton, Snackbar } from 'react-native-paper';
 import RenderHTML from 'react-native-render-html';
@@ -39,9 +39,13 @@ export default function CartScreen() {
   const dispatch = useDispatch();
   const router = useRouter();
 
+  const prevItemsCountRef = useRef(0);
+
   // 👇 get screen height to control the items area's max height
   // const { height: screenHeight } = useWindowDimensions();
   const { height: screenHeight, width: screenWidth } = useWindowDimensions();
+
+  const [carryBagDisabled, setCarryBagDisabled] = useState(false);
 
 
   const [showMinOrderPopup, setShowMinOrderPopup] = useState(false);
@@ -122,6 +126,13 @@ export default function CartScreen() {
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.qty, 0);
 
+  const hasNonCarryItems = Object.values(storeItemList || {}).some(
+    ({ item, quantity }) => item?.dish_id !== 'carry_bag' && quantity > 0
+  );
+
+  const hasCarryBag = !!(storeItemList && storeItemList['carry_bag']);
+
+
   const loadCarryBag = useCallback(
     async () => {
       try {
@@ -129,11 +140,6 @@ export default function CartScreen() {
 
         if (response?.restaurant_service_id && parseFloat(response.price) > 0) {
           const bagId = 'carry_bag';
-
-          // ✅ Prevent adding carry bag again if already exists
-          if (storeItemList[bagId]) {
-            return;
-          }
 
           const carryBagItem = {
             dish_id: bagId,
@@ -148,15 +154,27 @@ export default function CartScreen() {
         console.error('❌ Failed to load carry bag:', err);
       }
     },
-    [restaurantId, storeItemList, dispatch]
+    [restaurantId, dispatch]
   );
 
+
   // 👉 Load carry bag when restaurant & cart items exist
+  // 👉 Load carry bag only when cart goes from empty → non-empty
+  // 👉 Auto-add carry bag only when:
+  // - restaurantId exists
+  // - user did NOT manually remove carry bag
+  // - there is at least 1 non-carry-bag item
+  // - carry bag is not already in cart
   useEffect(() => {
-    if (restaurantId && Object.keys(storeItemList).length > 0) {
+    if (!restaurantId) return;
+    if (carryBagDisabled) return;
+
+    if (hasNonCarryItems && !hasCarryBag) {
       loadCarryBag();
     }
-  }, [restaurantId, storeItemList, loadCarryBag]);
+  }, [restaurantId, hasNonCarryItems, hasCarryBag, carryBagDisabled, loadCarryBag]);
+
+
 
   // 👉 Only reset mode when cart becomes completely empty
   useEffect(() => {

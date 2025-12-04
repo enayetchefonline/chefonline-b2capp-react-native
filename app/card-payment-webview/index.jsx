@@ -1,10 +1,12 @@
-import {useLocalSearchParams, useRouter} from 'expo-router';
-import {useState} from 'react';
-import {ActivityIndicator, Dimensions, SafeAreaView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {WebView} from 'react-native-webview';
-import {useDispatch} from 'react-redux';
-import {clearCart} from '../../store/slices/cartSlice';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
+import { ActivityIndicator, Dimensions, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { WebView } from 'react-native-webview';
+import { useDispatch, useSelector } from 'react-redux';
+import { clearCart } from '../../store/slices/cartSlice';
+import { clearRestaurantDetail } from '../../store/slices/restaurantDetailSlice';
+import { clearRestaurantList } from '../../store/slices/restaurantListSlice';
 
 export default function CardPaymentWebview() {
 	const {url} = useLocalSearchParams();
@@ -14,9 +16,16 @@ export default function CardPaymentWebview() {
 	const [loading, setLoading] = useState(true); // initial true to show loader on screen load
 	const insets = useSafeAreaInsets();
 
+	const storeRestaurantList = useSelector((state) => state.restaurantList.restaurantList);
+
 	const handleBackToHome = () => {
+		console.log()
 		setLoading(true);
 		dispatch(clearCart());
+		dispatch(clearRestaurantList());
+		dispatch(clearRestaurantDetail());
+
+		// console.log("storeResturantLIst ..........", storeRestaurantList)
 
 		setTimeout(() => {
 			router.replace('/(tabs)/search');

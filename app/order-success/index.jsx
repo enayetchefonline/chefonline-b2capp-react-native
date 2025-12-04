@@ -3,6 +3,8 @@ import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowD
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
 import { clearCart } from '../../store/slices/cartSlice';
+import { clearRestaurantDetail } from '../../store/slices/restaurantDetailSlice';
+import { clearRestaurantList } from '../../store/slices/restaurantListSlice';
 
 export default function OrderSuccessScreen() {
 	const router = useRouter();
@@ -12,7 +14,9 @@ export default function OrderSuccessScreen() {
 	const restaurantName = useSelector((state) => state.cart.restaurantName);
 	const restaurantDetails = useSelector((state) => state.restaurantDetail.data);
 
-	console.log("status", status)
+	const storeRestaurantList = useSelector((state) => state.restaurantList.restaurantList);
+
+	// console.log("status", status)
 
 	// 👉 for responsive heights
 	const { height: screenHeight } = useWindowDimensions();
@@ -20,8 +24,13 @@ export default function OrderSuccessScreen() {
 	const isSuccess = status === 1 || status === 'Success';
 
 	const handleBackToHome = () => {
+		// console.log("back to home")
 		if (isSuccess) {
 			dispatch(clearCart());
+			dispatch(clearRestaurantList());
+			dispatch(clearRestaurantDetail());
+
+			// console.log("storeResturantList order success screen", storeRestaurantList)
 			router.replace('/(tabs)/search');
 		} else {
 			router.replace('/(tabs)/cart');
@@ -48,10 +57,10 @@ export default function OrderSuccessScreen() {
 					</Text>
 				) : (
 					<>
-					<Text style={styles.title}>Please wait for 3 minutes to place a new order.</Text>
-					<Text style={styles.message}>{message}</Text>
+						<Text style={styles.title}>Please wait for 3 minutes to place a new order.</Text>
+						<Text style={styles.message}>{message}</Text>
 					</>
-					
+
 				)}
 
 				{isSuccess ? (
