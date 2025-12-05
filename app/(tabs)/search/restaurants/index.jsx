@@ -85,7 +85,6 @@ export default function RestaurantListScreen() {
         setHasMoreData(false);
       } else if (Array.isArray(result)) {
         if (page > 1) {
-          // Append page 2, 3, ...
           dispatch(setRestaurantList([...storeRestaurantList, ...result]));
         }
         setPageNo(page + 1);
