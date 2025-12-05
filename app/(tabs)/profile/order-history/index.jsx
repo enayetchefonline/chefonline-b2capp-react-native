@@ -68,12 +68,6 @@ export default function OrderHistoryScreen() {
 		fetchOrders();
 	}, [!authUser?.userid]);
 
-    // useFocusEffect(
-    //     useCallback(() => {
-    //         fetchOrders();
-    //     }, [fetchOrders])
-    // );
-
     // ⭐ Shared star renderer (for popup)
     const stars = [1, 2, 3, 4, 5];
     const renderStars = (rating, setRating) => (
