@@ -112,13 +112,6 @@ export default function RestaurantListScreen() {
     // console.log('rest schedulelist', JSON.stringify(scheduleList));
     const status = getRestaurantScheduleStatus(scheduleList, getCurrentApiDateTimeObj());
  
-    // If you want to block closed restaurants (except reservation), uncomment:
-    // const storeOrderType = selectedDeliveryType;
-    // if (status === 'CLOSED' && storeOrderType !== 'reservation') {
-    //   setShowClosedPopup(true);
-    //   return;
-    // }
- 
     if (Object.keys(cart.items).length > 0 && cart.restaurantId && cart.restaurantId !== restaurantId) {
       setSelectedRestaurantId(restaurantId);
       setShowCartPopup(true);
