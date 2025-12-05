@@ -417,11 +417,21 @@ export default function CheckoutScreen() {
 		};
 		try {
 			const response = await confirmOrder(newPayload);
+			
 			if (typeof response === 'string' && response.includes('MySQL server has gone away')) {
 				setVerificationCodePopupVisible(false);
 				alert('Server connection error. Please try again.');
 				return;
 			}
+
+
+			if (typeof response === 'string' && response.includes('MySQL server has gone away1909')) {
+				setVerificationCodePopupVisible(false);
+				alert('Server connection error. Please try again.');
+				return;
+			}
+
+
 			if (response.status === 'Success') {
 				setVerificationCodePopupVisible(false);
 				router.push({

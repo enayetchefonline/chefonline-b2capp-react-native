@@ -1,18 +1,19 @@
-import {useLocalSearchParams} from 'expo-router';
-import {useEffect, useState} from 'react';
-import {ActivityIndicator, Image, ScrollView, StyleSheet, Text, View} from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Colors from '../../../../constants/color';
-import {getOrderDetail} from '../../../../lib/api';
+import { getOrderDetail } from '../../../../lib/api';
 
 export default function OrderDetailScreen() {
-	const {orderId} = useLocalSearchParams();
+	const { orderId } = useLocalSearchParams();
 	const [order, setOrder] = useState(null);
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
 		const fetchOrderDetail = async () => {
 			try {
-				const response = await getOrderDetail({orderid: orderId});
+				const response = await getOrderDetail({ orderid: orderId });
+				// console.log("getOrderDetail reponse", JSON.stringify(response))
 				if (Array.isArray(response?.order) && response.order.length > 0) {
 					setOrder(response.order[0]);
 				}
@@ -30,7 +31,7 @@ export default function OrderDetailScreen() {
 		return (
 			<View style={styles.loader}>
 				<ActivityIndicator size="large" color={Colors.primary} />
-				<Text style={{marginTop: 10, color: Colors.text}}>Loading Order Details...</Text>
+				<Text style={{ marginTop: 10, color: Colors.text }}>Loading Order Details...</Text>
 			</View>
 		);
 	}
@@ -38,18 +39,24 @@ export default function OrderDetailScreen() {
 	if (!order) {
 		return (
 			<View style={styles.loader}>
-				<Text style={{color: Colors.text}}>No order details found.</Text>
+				<Text style={{ color: Colors.text }}>No order details found.</Text>
 			</View>
 		);
 	}
+	const dishes = order.ordered_dish?.dish_choose || [];	const discount = order.discount?.off?.[0];
+	const offer = order.offer?.offer_list?.[0];
 
-	const dishes = order.ordered_dish?.dish_choose || [];
-	const discount = order.discount?.off?.[0];
+	// If discount_amount > 0 → it's a discount
+	const isDiscount = Number(order.discount_amount) > 0;
+
+	// If no discount but offer_text exists → it's an offer
+	const isOffer = !isDiscount && !!order.offer_text?.trim();
+
 
 	return (
 		<ScrollView contentContainerStyle={styles.container}>
 			<View style={styles.card}>
-				{order.logo && <Image source={{uri: order.logo}} style={styles.logo} />}
+				{order.logo && <Image source={{ uri: order.logo }} style={styles.logo} />}
 				<Text style={styles.orderNo}>ORDER NO - {order.order_no}</Text>
 				<Text style={styles.restaurant}>{order.restaurant_name}</Text>
 
@@ -101,9 +108,9 @@ export default function OrderDetailScreen() {
 					</View>
 				)}
 
-				<View style={[styles.totalRow, {backgroundColor: 'red'}]}>
-					<Text style={[styles.label, {color: 'white'}]}>TOTAL</Text>
-					<Text style={[styles.total, {color: 'white'}]}>£{parseFloat(order.grand_total).toFixed(2)}</Text>
+				<View style={[styles.totalRow, { backgroundColor: 'red' }]}>
+					<Text style={[styles.label, { color: 'white' }]}>TOTAL</Text>
+					<Text style={[styles.total, { color: 'white' }]}>£{parseFloat(order.grand_total).toFixed(2)}</Text>
 				</View>
 
 				<View style={styles.footerRow}>
@@ -115,14 +122,25 @@ export default function OrderDetailScreen() {
 					<Text style={styles.value}>{order.order_type}</Text>
 				</View>
 
-				{!!discount && (
+				{isDiscount && !!discount && (
 					<View style={styles.footerRow}>
-						<Text style={styles.label}>DISCOUNT OFFER</Text>
+						<Text style={styles.label}>DISCOUNT</Text>
 						<Text style={styles.value}>
-							{discount.discount_title} - {discount.discount_description}
+							{discount.discount_title}
 						</Text>
 					</View>
 				)}
+
+				{isOffer && !!offer && (
+					<View style={styles.footerRow}>
+						<Text style={styles.label}>OFFER</Text>
+						<Text style={styles.value}>
+							{/* {offer.offer_title} - {offer.description} */}
+							{offer.offer_title}
+						</Text>
+					</View>
+				)}
+
 			</View>
 		</ScrollView>
 	);
@@ -139,7 +157,7 @@ const styles = StyleSheet.create({
 		padding: 16,
 		marginBottom: 16,
 		shadowColor: '#000',
-		shadowOffset: {width: 0, height: 2},
+		shadowOffset: { width: 0, height: 2 },
 		shadowOpacity: 0.1,
 		shadowRadius: 4,
 		elevation: 10,
