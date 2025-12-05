@@ -56,6 +56,8 @@ export default function RestaurantListScreen() {
   //   storeRestaurantList.map((rest) => rest?.rest_id)
   // );
 
+  console.log("searchText", searchText, "selectedCuisine", selectedCuisine, "selectedDeliveryType", selectedDeliveryType);
+
   // 🔄 Reset pagination state whenever search filters change
   useEffect(() => {
     setPageNo(2);
