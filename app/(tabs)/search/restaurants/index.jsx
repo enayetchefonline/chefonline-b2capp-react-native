@@ -73,7 +73,7 @@ export default function RestaurantListScreen() {
     const data = {
       searchText,
       cuisineType: selectedCuisine || 'all',
-      orderType: selectedDeliveryType || 'takeaway', // safe fallback
+      orderType: selectedDeliveryType || 'takeaway',
       pageNo: page,
     };
  
