@@ -1,15 +1,15 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-	ActivityIndicator,
-	FlatList,
-	Modal,
-	Pressable,
-	StyleSheet,
-	Text,
-	TextInput,
-	TouchableOpacity,
-	View,
+    ActivityIndicator,
+    FlatList,
+    Modal,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useSelector } from 'react-redux';
@@ -259,7 +259,7 @@ export default function OrderHistoryScreen() {
 
     return (
         <View style={styles.screen}>
-            <Text style={styles.title}>Total Orders: {orders.length}</Text>
+            {/* <Text style={styles.title}>Total Orders: {orders.length}</Text> */}
 
             <FlatList
                 data={orders}

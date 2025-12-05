@@ -4,14 +4,14 @@ import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react
 import { ActivityIndicator } from 'react-native-paper';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
-
+ 
 import CustomPopUp from '../../../../components/ui/CustomPopUp';
 import { searchRestaurantsApi } from '../../../../lib/api';
 import { getCurrentApiDateTimeObj, getRestaurantScheduleStatus } from '../../../../lib/utils/restaurantSchedule';
 import { clearCart } from '../../../../store/slices/cartSlice';
 import { clearRestaurantDetail } from '../../../../store/slices/restaurantDetailSlice';
 import { setRestaurantList } from '../../../../store/slices/restaurantListSlice';
-
+ 
 const COLORS = {
   background: '#F9FAFB',
   text: '#22223B',
@@ -27,37 +27,37 @@ const COLORS = {
   discountText: '#EC1839',
   badge: '#FFE7E7',
 };
-
+ 
 export default function RestaurantListScreen() {
   const router = useRouter();
   const dispatch = useDispatch();
-
+ 
   const storeRestaurantList = useSelector((state) => state.restaurantList.restaurantList);
   const cart = useSelector((state) => state.cart);
-
+ 
   const searchText = useSelector((state) => state.cart.searchText);
   const selectedCuisine = useSelector((state) => state.cart.selectedCuisine);
   const selectedDeliveryType = useSelector((state) => state.cart.orderType);
-
+ 
   const [pageNo, setPageNo] = useState(2);              // next page to load
   const [isFetching, setIsFetching] = useState(false);
   const [hasMoreData, setHasMoreData] = useState(true);
-
+ 
   const [onEndReachedCalledDuringMomentum, setOnEndReachedCalledDuringMomentum] = useState(false);
   const [hasUserScrolled, setHasUserScrolled] = useState(false);
-
+ 
   const [showCartPopup, setShowCartPopup] = useState(false);
   const [showRedStickerPopup, setShowRedStickerPopup] = useState(false);
   const [selectedRestaurantId, setSelectedRestaurantId] = useState(null);
   const [showClosedPopup, setShowClosedPopup] = useState(false);
-
+ 
   // console.log(
   //   'storeRestaurantList.........',
   //   storeRestaurantList.map((rest) => rest?.rest_id)
   // );
-
+ 
   console.log("searchText", searchText, "selectedCuisine", selectedCuisine, "selectedDeliveryType", selectedDeliveryType);
-
+ 
   // 🔄 Reset pagination state whenever search filters change
   useEffect(() => {
     setPageNo(2);
@@ -66,30 +66,25 @@ export default function RestaurantListScreen() {
     setHasUserScrolled(false);
     setOnEndReachedCalledDuringMomentum(false);
   }, [searchText, selectedCuisine, selectedDeliveryType]);
-
+ 
   const fetchSearchRestaurant = async (page) => {
-    if (!hasMoreData || isFetching) return;
-
+    if (!hasUserScrolled) return;
     setIsFetching(true);
-
     const data = {
       searchText,
       cuisineType: selectedCuisine || 'all',
       orderType: selectedDeliveryType || 'takeaway', // safe fallback
       pageNo: page,
     };
-
+ 
     try {
       const response = await searchRestaurantsApi(data);
       const result = response?.app;
-
+ 
       if (Array.isArray(result) && result[0]?.status === 'Failed') {
         setHasMoreData(false);
       } else if (Array.isArray(result)) {
-        if (page === 1) {
-          // Just in case you ever call page 1 from here
-          dispatch(setRestaurantList(result));
-        } else {
+        if (page > 1) {
           // Append page 2, 3, ...
           dispatch(setRestaurantList([...storeRestaurantList, ...result]));
         }
@@ -104,27 +99,27 @@ export default function RestaurantListScreen() {
       setIsFetching(false);
     }
   };
-
+ 
   const handleRestaurantPress = (restaurantId) => {
     const restaurant = storeRestaurantList.find((r) => r.rest_id === restaurantId);
     if (!restaurant) return;
-
+ 
     if (restaurant?.red_sticker === 1) {
       setShowRedStickerPopup(true);
       return;
     }
-
+ 
     const scheduleList = restaurant?.restuarent_schedule?.schedule || [];
     // console.log('rest schedulelist', JSON.stringify(scheduleList));
     const status = getRestaurantScheduleStatus(scheduleList, getCurrentApiDateTimeObj());
-
+ 
     // If you want to block closed restaurants (except reservation), uncomment:
     // const storeOrderType = selectedDeliveryType;
     // if (status === 'CLOSED' && storeOrderType !== 'reservation') {
     //   setShowClosedPopup(true);
     //   return;
     // }
-
+ 
     if (Object.keys(cart.items).length > 0 && cart.restaurantId && cart.restaurantId !== restaurantId) {
       setSelectedRestaurantId(restaurantId);
       setShowCartPopup(true);
@@ -132,7 +127,7 @@ export default function RestaurantListScreen() {
       router.push(`/search/restaurants/details/${restaurantId}`);
     }
   };
-
+ 
   const handleConfirmChangeRestaurant = () => {
     dispatch(clearCart());
     dispatch(clearRestaurantDetail());
@@ -142,26 +137,26 @@ export default function RestaurantListScreen() {
       setSelectedRestaurantId(null);
     }
   };
-
+ 
   const renderItem = ({ item }) => {
     const deliveryMinOrder =
       item?.order_policy?.policy?.find((policy) => policy?.policy_name === 'Delivery')?.min_order ?? null;
-
+ 
     const collectionTimes =
       item?.order_policy?.policy
         ?.filter((policy) => policy?.policy_name === 'Collection')
         ?.map((p) => `${p.policy_time} mins`)
         ?.join(', ') ?? '';
-
+ 
     const deliveryTimes =
       item?.order_policy?.policy
         ?.filter((policy) => policy?.policy_name === 'Delivery')
         ?.map((p) => `${p.policy_time} mins`)
         ?.join(', ') ?? '';
-
+ 
     const isDiscount = item?.discount?.status === 1 && item?.discount?.off?.length > 0;
     const isOffer = item?.offer?.status === 1;
-
+ 
     return (
       <TouchableOpacity
         style={styles.restaurantItem}
@@ -178,12 +173,12 @@ export default function RestaurantListScreen() {
               </View>
             )}
           </View>
-
+ 
           <View style={styles.detailsContainer}>
             <Text style={styles.restaurantName} numberOfLines={1}>
               {item.restaurant_name}
             </Text>
-
+ 
             <Text style={styles.cuisine} numberOfLines={1}>
               {item.available_cuisine?.cuisine?.length
                 ? item.available_cuisine.cuisine
@@ -194,9 +189,9 @@ export default function RestaurantListScreen() {
                     .join(', ')
                 : 'Cuisine not available'}
             </Text>
-
+ 
             <Text style={styles.cuisine}>{item.postcode}</Text>
-
+ 
             {item.rating?.rating_count > 0 && (
               <View style={styles.row}>
                 <Ionicons name="star" size={16} color={COLORS.primary} />
@@ -204,14 +199,14 @@ export default function RestaurantListScreen() {
                 <Text style={styles.ratingCount}>({item.rating?.rating_count} reviews)</Text>
               </View>
             )}
-
+ 
             {deliveryMinOrder && (
               <Text style={styles.minDelivery}>
                 Min Delivery: <Text style={{ fontWeight: 'bold' }}>£{deliveryMinOrder}</Text>
               </Text>
             )}
           </View>
-
+ 
           {isDiscount && (
             <View style={styles.discountContainer}>
               <Text style={styles.discountText}>{item.discount.off[0].discount_amount}% OFF</Text>
@@ -219,7 +214,7 @@ export default function RestaurantListScreen() {
             </View>
           )}
         </View>
-
+ 
         <View style={styles.cardFooterContainer}>
           {[
             item.accept_reservation === 1 && (
@@ -257,7 +252,7 @@ export default function RestaurantListScreen() {
       </TouchableOpacity>
     );
   };
-
+ 
   return (
     <View style={styles.container}>
       <FlatList
@@ -299,7 +294,7 @@ export default function RestaurantListScreen() {
           ) : null
         }
       />
-
+ 
       <CustomPopUp
         visible={showCartPopup}
         title="Change Restaurant?"
@@ -310,7 +305,7 @@ export default function RestaurantListScreen() {
         cancelText="No"
         showCancel
       />
-
+ 
       <CustomPopUp
         visible={showRedStickerPopup}
         title="Sorry for any inconvenience"
@@ -319,7 +314,7 @@ export default function RestaurantListScreen() {
         confirmText="OK"
         showCancel={false}
       />
-
+ 
       <CustomPopUp
         visible={showClosedPopup}
         title="Sorry!"
@@ -331,7 +326,7 @@ export default function RestaurantListScreen() {
     </View>
   );
 }
-
+ 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 12, paddingTop: 16, backgroundColor: COLORS.background },
   title: { fontSize: 12, fontWeight: '700', color: COLORS.text, marginBottom: 18 },
