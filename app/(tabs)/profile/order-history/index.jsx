@@ -64,9 +64,9 @@ export default function OrderHistoryScreen() {
         }
     };
 
-	useEffect(() => {
-		fetchOrders();
-	}, [!authUser?.userid]);
+    useEffect(() => {
+        fetchOrders();
+    }, [!authUser?.userid]);
 
     // ⭐ Shared star renderer (for popup)
     const stars = [1, 2, 3, 4, 5];
@@ -121,7 +121,7 @@ export default function OrderHistoryScreen() {
                 reviewComment: comment,
             });
 
-			console.log('reviewSubmit', JSON.stringify(response));
+            console.log('reviewSubmit', JSON.stringify(response));
 
             if (response?.msg?.toLowerCase().includes('success')) {
                 setRatingVisible(false);
@@ -140,6 +140,29 @@ export default function OrderHistoryScreen() {
             setSubmittingRating(false);
         }
     };
+
+    // ⭐ Reorder handler
+    const handleReorder = (order) => {
+        // TODO: implement your actual reorder logic here.
+        // Example 1: Navigate to a reorder screen / cart
+        // router.push({
+        // 	pathname: '/cart/reorder',
+        // 	params: { orderId: order.order_no, restId: order.rest_id },
+        // });
+
+        // Example 2: Hit a reorder API then go to cart
+        // await reorderApi({ orderId: order.order_no, userId: authUser?.userid });
+
+        router.push(`/search/restaurants/details/${order.rest_id}`);
+
+        // router.push({
+        // 	pathname: `/search/restaurants/details/${order.rest_id}`,
+        // 	params: { restId: order.rest_id },
+        // });
+
+        console.log('Reorder pressed for order: ', JSON.stringify(order));
+    };
+
 
     const renderItem = ({ item }) => {
         const reviewStatus = item?.review_status || {};
@@ -209,31 +232,47 @@ export default function OrderHistoryScreen() {
 
                 <View style={[styles.row, styles.buttonRow]}>
                     {isReviewed ? (
-                        <View style={styles.reviewPill}>
-                            <View style={styles.starRow}>
-                                {STARS.map((i) => (
-                                    <Ionicons
-                                        key={i}
-                                        name={i <= roundedRating ? 'star' : 'star-outline'}
-                                        size={18}
-                                        color={Colors.primary}
-                                        style={styles.starIcon}
-                                    />
-                                ))}
+                        <>
+                            <View style={styles.reviewPill}>
+                                <View style={styles.starRow}>
+                                    {STARS.map((i) => (
+                                        <Ionicons
+                                            key={i}
+                                            name={i <= roundedRating ? 'star' : 'star-outline'}
+                                            size={18}
+                                            color={Colors.primary}
+                                            style={styles.starIcon}
+                                        />
+                                    ))}
+                                </View>
+                                <Text style={styles.reviewText}>
+                                    {hasDetailedRating ? `${avgRating.toFixed(1)} / 5` : 'Reviewed'}
+                                </Text>
                             </View>
-                            <Text style={styles.reviewText}>
-                                {hasDetailedRating
-                                    ? `${avgRating.toFixed(1)} / 5`
-                                    : 'Reviewed'}
-                            </Text>
-                        </View>
+
+                            <CustomButton
+                                title="REORDER"
+                                iconName="refresh-outline"
+                                onPress={() => handleReorder(item)}
+                                containerStyle={[styles.btnHalf, { marginLeft: 8 }]}
+                            />
+                        </>
                     ) : (
-                        <CustomButton
-                            title="REVIEW & RATING"
-                            iconName="star-outline"
-                            onPress={() => handleOpenRating(item)}
-                            containerStyle={styles.btnHalf}
-                        />
+                        <>
+                            <CustomButton
+                                title="REVIEW & RATING"
+                                iconName="star-outline"
+                                onPress={() => handleOpenRating(item)}
+                                containerStyle={styles.btnHalf}
+                            />
+
+                            <CustomButton
+                                title="REORDER"
+                                iconName="refresh-outline"
+                                onPress={() => handleReorder(item)}
+                                containerStyle={[styles.btnHalf, { marginLeft: 8 }]}
+                            />
+                        </>
                     )}
                 </View>
             </Pressable>
@@ -347,178 +386,178 @@ export default function OrderHistoryScreen() {
     );
 }
 const styles = StyleSheet.create({
-	screen: {
-		flex: 1,
-		backgroundColor: Colors.background,
-	},
-	title: {
-		fontWeight: 'bold',
-		color: Colors.text,
-		marginTop: 20,
-		marginBottom: 10,
-		textAlign: 'right',
-		paddingRight: 20,
-	},
-	list: {
-		padding: 16,
-	},
-	card: {
-		backgroundColor: Colors.white,
-		borderRadius: 8,
-		padding: 16,
-		marginBottom: 16,
-		shadowColor: '#000',
-		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.1,
-		shadowRadius: 4,
-		elevation: 10,
-	},
-	row: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		justifyContent: 'space-between',
-	},
-	justifyBetween: {
-		justifyContent: 'space-between',
-	},
-	restaurant: {
-		fontSize: 16,
-		fontWeight: '600',
-		color: Colors.text,
-	},
-	orderId: {
-		fontSize: 12,
-		color: Colors.text,
-	},
-	iconSmall: {
-		marginRight: 6,
-	},
-	address: {
-		fontSize: 14,
-		color: Colors.text,
-	},
-	date: {
-		fontSize: 12,
-		color: Colors.text,
-	},
-	times: {
-		fontSize: 12,
-		color: Colors.text,
-	},
-	cash: {
-		fontSize: 12,
-		color: Colors.text,
-	},
-	type: {
-		fontSize: 14,
-		color: Colors.primary,
-		marginLeft: 4,
-	},
-	mt4: {
-		marginTop: 8,
-	},
-	buttonRow: {
-		justifyContent: 'flex-end',
-		marginTop: 12,
-	},
-	btnHalf: {
-		width: '48%',
-	},
-	divider: {
-		width: '100%',
-		height: 1,
-		backgroundColor: Colors.border || '#ccc',
-		marginVertical: 12,
-	},
-	empty: {
-		marginTop: 80,
-		alignItems: 'center',
-	},
-	loader: {
-		flex: 1,
-		justifyContent: 'center',
-		alignItems: 'center',
-	},
+    screen: {
+        flex: 1,
+        backgroundColor: Colors.background,
+    },
+    title: {
+        fontWeight: 'bold',
+        color: Colors.text,
+        marginTop: 20,
+        marginBottom: 10,
+        textAlign: 'right',
+        paddingRight: 20,
+    },
+    list: {
+        padding: 16,
+    },
+    card: {
+        backgroundColor: Colors.white,
+        borderRadius: 8,
+        padding: 16,
+        marginBottom: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 10,
+    },
+    row: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    justifyBetween: {
+        justifyContent: 'space-between',
+    },
+    restaurant: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: Colors.text,
+    },
+    orderId: {
+        fontSize: 12,
+        color: Colors.text,
+    },
+    iconSmall: {
+        marginRight: 6,
+    },
+    address: {
+        fontSize: 14,
+        color: Colors.text,
+    },
+    date: {
+        fontSize: 12,
+        color: Colors.text,
+    },
+    times: {
+        fontSize: 12,
+        color: Colors.text,
+    },
+    cash: {
+        fontSize: 12,
+        color: Colors.text,
+    },
+    type: {
+        fontSize: 14,
+        color: Colors.primary,
+        marginLeft: 4,
+    },
+    mt4: {
+        marginTop: 8,
+    },
+    buttonRow: {
+        justifyContent: 'flex-end',
+        marginTop: 12,
+    },
+    btnHalf: {
+        width: '48%',
+    },
+    divider: {
+        width: '100%',
+        height: 1,
+        backgroundColor: Colors.border || '#ccc',
+        marginVertical: 12,
+    },
+    empty: {
+        marginTop: 80,
+        alignItems: 'center',
+    },
+    loader: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
 
-	// ⭐ rating pill
-	reviewPill: {
-		paddingHorizontal: 12,
-		paddingVertical: 6,
-		borderRadius: 20,
-		backgroundColor: Colors.background || '#f5f5f5',
-		flexDirection: 'row',
-		alignItems: 'center',
-	},
-	starRow: {
-		flexDirection: 'row',
-		marginRight: 6,
-	},
-	starIcon: {
-		marginRight: 2,
-	},
-	reviewText: {
-		fontSize: 12,
-		color: Colors.text,
-	},
+    // ⭐ rating pill
+    reviewPill: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        backgroundColor: Colors.background || '#f5f5f5',
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    starRow: {
+        flexDirection: 'row',
+        marginRight: 6,
+    },
+    starIcon: {
+        marginRight: 2,
+    },
+    reviewText: {
+        fontSize: 12,
+        color: Colors.text,
+    },
 
-	// ⭐ modal styles
-	modalOverlay: {
-		flex: 1,
-		backgroundColor: 'rgba(0,0,0,0.4)',
-		justifyContent: 'center',
-		alignItems: 'center',
-		padding: 16,
-	},
-	modalCard: {
-		width: '100%',
-		backgroundColor: Colors.white,
-		borderRadius: 10,
-		padding: 16,
-	},
-	modalTitle: {
-		fontSize: 16,
-		fontWeight: '600',
-		color: Colors.text,
-		marginBottom: 12,
-		textAlign: 'center',
-	},
-	modalRow: {
-		flexDirection: 'row',
-		justifyContent: 'space-around',
-		flexWrap: 'wrap',
-		alignItems: 'center',
-		// backgroundColor: Colors.dangerLight,
-		padding: 12,
-		borderRadius: 6,
-		marginBottom: 12,
-		textAlign: 'center',
-		gap: 12,
-	},
-	ratingItem: {
-		// flex: 0.48,
-		marginBottom: 12,
-	},
-	label: {
-		fontSize: 12,
-		color: Colors.text,
-		marginBottom: 6,
-	},
-	center: {
-		alignItems: 'center',
-	},
-	commentInput: {
-		borderWidth: 1,
-		borderColor: '#ccc',
-		borderRadius: 4,
-		padding: 10,
-		minHeight: 80,
-		textAlignVertical: 'top',
-		color: Colors.text,
-		marginTop: 8,
-	},
-	modalButtons: {
-		flexDirection: 'row',
-		justifyContent: 'flex-end',
-		marginTop: 16,
-	},
+    // ⭐ modal styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 16,
+    },
+    modalCard: {
+        width: '100%',
+        backgroundColor: Colors.white,
+        borderRadius: 10,
+        padding: 16,
+    },
+    modalTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: Colors.text,
+        marginBottom: 12,
+        textAlign: 'center',
+    },
+    modalRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        // backgroundColor: Colors.dangerLight,
+        padding: 12,
+        borderRadius: 6,
+        marginBottom: 12,
+        textAlign: 'center',
+        gap: 12,
+    },
+    ratingItem: {
+        // flex: 0.48,
+        marginBottom: 12,
+    },
+    label: {
+        fontSize: 12,
+        color: Colors.text,
+        marginBottom: 6,
+    },
+    center: {
+        alignItems: 'center',
+    },
+    commentInput: {
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 4,
+        padding: 10,
+        minHeight: 80,
+        textAlignVertical: 'top',
+        color: Colors.text,
+        marginTop: 8,
+    },
+    modalButtons: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        marginTop: 16,
+    },
 });

@@ -13,7 +13,7 @@ export default function OrderDetailScreen() {
 		const fetchOrderDetail = async () => {
 			try {
 				const response = await getOrderDetail({ orderid: orderId });
-				// console.log("getOrderDetail reponse", JSON.stringify(response))
+				console.log("getOrderDetail reponse", JSON.stringify(response))
 				if (Array.isArray(response?.order) && response.order.length > 0) {
 					setOrder(response.order[0]);
 				}
