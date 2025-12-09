@@ -157,13 +157,46 @@ export default function RestaurantDetailScreen() {
 		}
 	};
 
-	const handlePressTab = (index) => {
-		setTabIndex(index);
-		const pos = sectionPositionsRef.current[index];
-		if (menuScrollRef.current && typeof pos === 'number') {
-			menuScrollRef.current.scrollTo({ y: pos, animated: true });
+	const handleScroll = (e) => {
+		const scrollY = e.nativeEvent.contentOffset.y;
+
+		let currentIndex = 0;
+
+		const positions = Object.values(sectionPositionsRef.current);
+
+		for (let i = 0; i < positions.length; i++) {
+			if (scrollY >= positions[i] - TAB_HEIGHT) {
+				currentIndex = i;
+			}
+		}
+
+		if (currentIndex !== tabIndex) {
+			setTabIndex(currentIndex);
 		}
 	};
+
+	const handlePressTab = (index) => {
+		setTabIndex(index);
+
+		const pos = sectionPositionsRef.current[index];
+
+		if (menuScrollRef.current && typeof pos === "number") {
+			menuScrollRef.current.scrollTo({
+				y: pos - TAB_HEIGHT, // adjust so title stays below tabs
+				animated: true,
+			});
+		}
+	};
+
+
+
+	// const handlePressTab = (index) => {
+	// 	setTabIndex(index);
+	// 	const pos = sectionPositionsRef.current[index];
+	// 	if (menuScrollRef.current && typeof pos === 'number') {
+	// 		menuScrollRef.current.scrollTo({ y: pos, animated: true });
+	// 	}
+	// };
 
 	// --- UI Render Functions ---
 	const renderHeader = () => (
@@ -398,9 +431,8 @@ export default function RestaurantDetailScreen() {
 													...option,
 													dish_id: option.self_id,
 													dish_price: option.option_price,
-													dish_name: `${getParentDishName(option.parent_dish_id).replace(/:$/, '')}: ${
-														option.option_name
-													}`,
+													dish_name: `${getParentDishName(option.parent_dish_id).replace(/:$/, '')}: ${option.option_name
+														}`,
 													dish_description: option.option_description,
 												})
 											}
@@ -469,6 +501,8 @@ export default function RestaurantDetailScreen() {
 				<ScrollView
 					ref={menuScrollRef}
 					showsVerticalScrollIndicator={false}
+					onScroll={handleScroll}
+					scrollEventThrottle={16}
 					contentContainerStyle={styles.menuScrollContent}
 				>
 					{/* Spacer so first section isn't hidden behind tabs */}
