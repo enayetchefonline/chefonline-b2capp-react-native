@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
@@ -15,8 +15,6 @@ import {
 	updateItemQuantity,
 } from './../../../../../store/slices/cartSlice';
 import { setRestaurantDetail, setRestaurantPaymentOptions } from './../../../../../store/slices/restaurantDetailSlice';
-
-import ScrollableTabString from 'react-native-scrollable-tabstring';
 
 // --- COLOR CONSTANTS ---
 const COLORS = {
@@ -51,13 +49,11 @@ export default function RestaurantDetailScreen() {
 	const cartItems = useSelector((state) => state.cart.items);
 	const storeOrderType = useSelector((state) => state.cart.orderType);
 
-	
+	// refs for scrolling to sections
+	const menuScrollRef = useRef(null);
+	const sectionPositionsRef = useRef({}); // { index: y }
 
-	// console.log("restaurantDetails:", JSON.stringify(restaurantDetails?.accept_reservation));
-	// console.log("restaurantScheduleStatus:", restaurantScheduleStatus);
-	// const isResturantClosed = restaurantScheduleStatus === 'CLOSED';
-
-	// Fetch payment options and restaurant details
+	// Fetch payment options
 	useEffect(() => {
 		if (!restaurantId) return;
 		dispatch(setRestaurantId(restaurantId));
@@ -71,12 +67,12 @@ export default function RestaurantDetailScreen() {
 		})();
 	}, [restaurantId, dispatch]);
 
+	// Fetch restaurant details
 	useEffect(() => {
 		if (!restaurantId) return;
 		const fetchData = async () => {
 			try {
 				const response = await individualRestaurantsApi(restaurantId);
-				// console.log("individualRestaurantsApi response:", JSON.stringify(response));
 				const restaurant = response.app?.[0];
 				setRestaurantDetails(restaurant);
 				dispatch(setRestaurantDetail(restaurant));
@@ -99,7 +95,7 @@ export default function RestaurantDetailScreen() {
 		fetchData();
 	}, [restaurantId, dispatch]);
 
-	// --- Helper Functions ---
+	// --- Helper Functions (unchanged) ---
 	const addToCart = (item) => {
 		dispatch(addItemToCart(item));
 	};
@@ -132,7 +128,7 @@ export default function RestaurantDetailScreen() {
 			.reduce((total, { item, quantity }) => total + parseFloat(item.dish_price) * quantity, 0)
 			.toFixed(2);
 
-	// --- Menu Data Preparation ---
+	// --- Menu Data Preparation (unchanged) ---
 	const categories =
 		restaurantDetails?.cuisine?.flatMap((cuisine) => cuisine.category?.map((cat) => cat.category_name)) || [];
 
@@ -150,21 +146,24 @@ export default function RestaurantDetailScreen() {
 	});
 
 	const handleGoToCart = () => {
-
 		if (storeOrderType === 'reservation' && restaurantScheduleStatus === 'CLOSED') {
-			alert("Sorry we are closed today");
+			alert('Sorry we are closed today');
 			return;
 		} else if (storeOrderType === 'takeaway' && restaurantScheduleStatus === 'CLOSED') {
-			alert("Sorry we are closed today");
+			alert('Sorry we are closed today');
 			return;
 		} else {
-			// Proceed to cart
 			router.push('/cart');
 		}
-		
-		
-		
-	}
+	};
+
+	const handlePressTab = (index) => {
+		setTabIndex(index);
+		const pos = sectionPositionsRef.current[index];
+		if (menuScrollRef.current && typeof pos === 'number') {
+			menuScrollRef.current.scrollTo({ y: pos, animated: true });
+		}
+	};
 
 	// --- UI Render Functions ---
 	const renderHeader = () => (
@@ -177,7 +176,9 @@ export default function RestaurantDetailScreen() {
 							<Text style={styles.discountTextWithBg}>
 								{restaurantDetails?.discount?.off?.[0]?.discount_amount}% Discount
 							</Text>
-							<Text style={styles.discountText}>Min: £{restaurantDetails?.discount?.off?.[0]?.eligible_amount}</Text>
+							<Text style={styles.discountText}>
+								Min: £{restaurantDetails?.discount?.off?.[0]?.eligible_amount}
+							</Text>
 						</>
 					)}
 				</View>
@@ -189,8 +190,9 @@ export default function RestaurantDetailScreen() {
 							<Ionicons name="bag-check" size={14} color={COLORS.primary} style={styles.iconSmall} />
 							<Text style={styles.preparationTime}>
 								{(() => {
-									const time = restaurantDetails?.order_policy?.policy?.find((p) => p.policy_name === 'Collection')
-										?.policy_time;
+									const time = restaurantDetails?.order_policy?.policy?.find(
+										(p) => p.policy_name === 'Collection'
+									)?.policy_time;
 									return time ? `${time} min` : 'Collection not available';
 								})()}
 							</Text>
@@ -199,8 +201,9 @@ export default function RestaurantDetailScreen() {
 							<Ionicons name="bicycle-sharp" size={14} color={COLORS.primary} style={styles.iconSmall} />
 							<Text style={styles.preparationTime}>
 								{(() => {
-									const time = restaurantDetails?.order_policy?.policy?.find((p) => p.policy_name === 'Delivery')
-										?.policy_time;
+									const time = restaurantDetails?.order_policy?.policy?.find(
+										(p) => p.policy_name === 'Delivery'
+									)?.policy_time;
 									return time ? `${time} min` : 'Delivery not available';
 								})()}
 							</Text>
@@ -240,9 +243,8 @@ export default function RestaurantDetailScreen() {
 					<Text style={styles.viewMenuText}>Info</Text>
 				</TouchableOpacity>
 				<View style={styles.line} />
-				{
-					restaurantDetails?.accept_reservation === "1" && (
-						<>
+				{restaurantDetails?.accept_reservation === '1' && (
+					<>
 						<TouchableOpacity
 							style={styles.viewMenuButton}
 							onPress={() => router.push(`/search/restaurants/reservation/${restaurantId}`)}
@@ -250,11 +252,9 @@ export default function RestaurantDetailScreen() {
 							<Text style={styles.viewMenuText}>Reservation</Text>
 						</TouchableOpacity>
 						<View style={styles.line} />
-						</>
-						
-					)
-				}
-				
+					</>
+				)}
+
 				<TouchableOpacity
 					style={styles.viewMenuButton}
 					onPress={() => router.push(`/search/restaurants/offer/${restaurantId}`)}
@@ -334,7 +334,7 @@ export default function RestaurantDetailScreen() {
 		</View>
 	);
 
-	// Footer render (pass meetsAnyPolicy as an argument)
+	// Footer render (unchanged logic)
 	const renderFooter = () => (
 		<View style={styles.footer}>
 			<View>
@@ -352,6 +352,7 @@ export default function RestaurantDetailScreen() {
 			</TouchableOpacity>
 		</View>
 	);
+
 	const renderOptionsModal = () => (
 		<Modal animationType="slide" transparent visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
 			<View style={styles.modalContainer}>
@@ -397,8 +398,9 @@ export default function RestaurantDetailScreen() {
 													...option,
 													dish_id: option.self_id,
 													dish_price: option.option_price,
-													dish_name: `${getParentDishName(option.parent_dish_id).replace(/:$/, '')}: ${option.option_name
-														}`,
+													dish_name: `${getParentDishName(option.parent_dish_id).replace(/:$/, '')}: ${
+														option.option_name
+													}`,
 													dish_description: option.option_description,
 												})
 											}
@@ -440,13 +442,47 @@ export default function RestaurantDetailScreen() {
 			{renderHeader()}
 
 			<View style={styles.menuContainer}>
-				<ScrollableTabString
-					dataTabs={tabCategories}
-					dataSections={tabDataSections}
-					onPressTab={setTabIndex}
-					renderTabName={(item) => <Text style={styles.menuCategoryText}>{item.label}</Text>}
-					renderSection={(section) => (
-						<View key={section.category} style={styles.menuSectionWrapper}>
+				{/* Fixed tabs inside card */}
+				<View style={styles.tabsWrapper}>
+					<ScrollView
+						horizontal
+						showsHorizontalScrollIndicator={false}
+						contentContainerStyle={styles.tabsContainer}
+					>
+						{tabCategories.map((tab, index) => (
+							<TouchableOpacity key={tab.label} onPress={() => handlePressTab(index)}>
+								<Text
+									style={
+										tabIndex === index
+											? styles.menuCategoryTextActive
+											: styles.menuCategoryText
+									}
+								>
+									{tab.label}
+								</Text>
+							</TouchableOpacity>
+						))}
+					</ScrollView>
+				</View>
+
+				{/* Scrollable sections under fixed tabs */}
+				<ScrollView
+					ref={menuScrollRef}
+					showsVerticalScrollIndicator={false}
+					contentContainerStyle={styles.menuScrollContent}
+				>
+					{/* Spacer so first section isn't hidden behind tabs */}
+					<View style={styles.tabsSpacer} />
+
+					{tabDataSections.map((section, index) => (
+						<View
+							key={section.category}
+							style={styles.menuSectionWrapper}
+							onLayout={(e) => {
+								const y = e.nativeEvent.layout.y;
+								sectionPositionsRef.current[index] = y;
+							}}
+						>
 							<Text style={styles.menuSectionTitle}>{section.category}</Text>
 							{section.dishes.length > 0 ? (
 								section.dishes.map((item) => renderMenuItem(item, section.category))
@@ -454,11 +490,8 @@ export default function RestaurantDetailScreen() {
 								<Text style={styles.noItemsText}>No items in this category</Text>
 							)}
 						</View>
-					)}
-					selectedTabStyle={styles.menuCategoryTextActive}
-					unselectedTabStyle={styles.menuCategoryText}
-					initialTab={tabIndex}
-				/>
+					))}
+				</ScrollView>
 			</View>
 
 			{Object.keys(cartItems).length > 0 && <View>{renderFooter(meetsAnyPolicy)}</View>}
@@ -466,6 +499,8 @@ export default function RestaurantDetailScreen() {
 		</View>
 	);
 }
+
+const TAB_HEIGHT = 48; // approximate height of the tabs row
 
 const styles = StyleSheet.create({
 	container: {
@@ -556,10 +591,10 @@ const styles = StyleSheet.create({
 		fontSize: 14,
 		color: COLORS.gray,
 	},
+
 	menuContainer: {
 		flex: 1,
 		backgroundColor: COLORS.white,
-		gap: 15,
 		borderRadius: 8,
 		shadowColor: COLORS.cardShadow,
 		shadowOffset: { width: 0, height: 2 },
@@ -568,6 +603,30 @@ const styles = StyleSheet.create({
 		elevation: 10,
 		overflow: 'hidden',
 	},
+	menuScrollContent: {
+		paddingBottom: 16,
+	},
+
+	// Fixed tabs
+	tabsWrapper: {
+		position: 'absolute',
+		top: 0,
+		left: 0,
+		right: 0,
+		zIndex: 999,
+		backgroundColor: COLORS.white,
+		borderBottomWidth: 1,
+		borderBottomColor: COLORS.lightGray,
+	},
+	tabsContainer: {
+		flexDirection: 'row',
+		alignItems: 'center',
+	},
+
+	tabsSpacer: {
+		height: TAB_HEIGHT, // same as tabs height so first section starts below tabs
+	},
+
 	menuCategoryText: {
 		fontSize: 14,
 		color: COLORS.text,
@@ -580,14 +639,12 @@ const styles = StyleSheet.create({
 		fontWeight: 'bold',
 		paddingHorizontal: 10,
 		paddingVertical: 15,
+		// borderBottomWidth: 2,
+		// borderBottomColor: COLORS.primary,
 	},
+
 	menuSectionWrapper: {
 		backgroundColor: COLORS.white,
-		shadowColor: COLORS.cardShadow,
-		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.1,
-		shadowRadius: 4,
-		elevation: 10,
 	},
 	menuSectionTitle: {
 		fontSize: 18,
@@ -595,6 +652,7 @@ const styles = StyleSheet.create({
 		color: COLORS.text,
 		backgroundColor: COLORS.lightestGray,
 		paddingHorizontal: 10,
+		paddingVertical: 8,
 	},
 	menuItem: {
 		flexDirection: 'row',
