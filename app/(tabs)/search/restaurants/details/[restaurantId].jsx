@@ -1,6 +1,16 @@
+// app/(tabs)/search/restaurants/details/[restaurantId].jsx
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+	ActivityIndicator,
+	Dimensions,
+	Modal,
+	ScrollView,
+	StyleSheet,
+	Text,
+	TouchableOpacity,
+	View,
+} from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
 import { getPaymentMethodOption, individualRestaurantsApi } from '../../../../../lib/api';
@@ -33,6 +43,8 @@ const COLORS = {
 	modalBg: 'rgba(0, 0, 0, 0.5)',
 };
 
+const TAB_HEIGHT = 48; // approximate height of the tabs row
+
 export default function RestaurantDetailScreen() {
 	const router = useRouter();
 	const { restaurantId } = useLocalSearchParams();
@@ -49,9 +61,13 @@ export default function RestaurantDetailScreen() {
 	const cartItems = useSelector((state) => state.cart.items);
 	const storeOrderType = useSelector((state) => state.cart.orderType);
 
-	// refs for scrolling to sections
+	// refs for scrolling to sections (vertical)
 	const menuScrollRef = useRef(null);
-	const sectionPositionsRef = useRef({}); // { index: y }
+	const sectionPositionsRef = useRef({}); // { index: adjustedY }
+
+	// refs for horizontal tabs auto-scroll
+	const tabsScrollRef = useRef(null);
+	const tabLayoutsRef = useRef({}); // { index: { x, width } }
 
 	// Fetch payment options
 	useEffect(() => {
@@ -95,7 +111,7 @@ export default function RestaurantDetailScreen() {
 		fetchData();
 	}, [restaurantId, dispatch]);
 
-	// --- Helper Functions (unchanged) ---
+	// --- Helper Functions ---
 	const addToCart = (item) => {
 		dispatch(addItemToCart(item));
 	};
@@ -128,7 +144,7 @@ export default function RestaurantDetailScreen() {
 			.reduce((total, { item, quantity }) => total + parseFloat(item.dish_price) * quantity, 0)
 			.toFixed(2);
 
-	// --- Menu Data Preparation (unchanged) ---
+	// --- Menu Data Preparation ---
 	const categories =
 		restaurantDetails?.cuisine?.flatMap((cuisine) => cuisine.category?.map((cat) => cat.category_name)) || [];
 
@@ -157,16 +173,46 @@ export default function RestaurantDetailScreen() {
 		}
 	};
 
+	// Auto scroll horizontal tabs to keep active tab visible/centered
+	const scrollToActiveTab = useCallback((index) => {
+		const layout = tabLayoutsRef.current[index];
+		if (!layout || !tabsScrollRef.current) return;
+
+		const screenWidth = Dimensions.get('window').width - 30; // minus container padding (15 + 15)
+		const targetX = Math.max(0, layout.x + layout.width / 2 - screenWidth / 2);
+
+		tabsScrollRef.current.scrollTo({
+			x: targetX,
+			animated: true,
+		});
+	}, []);
+
+	useEffect(() => {
+		scrollToActiveTab(tabIndex);
+	}, [tabIndex, scrollToActiveTab]);
+
+	// As you scroll vertically, detect which section is currently at top
+	// As you scroll vertically, detect which section is currently in the middle of the view
 	const handleScroll = (e) => {
-		const scrollY = e.nativeEvent.contentOffset.y;
+		const { contentOffset, layoutMeasurement } = e.nativeEvent;
+		const scrollY = contentOffset.y;
+
+		// Y position of the vertical center of the visible area
+		const viewCenterY = scrollY + layoutMeasurement.height / 2;
+
+		// Build positions array in order
+		const positions = tabDataSections.map((_, i) => sectionPositionsRef.current[i] ?? 0);
 
 		let currentIndex = 0;
 
-		const positions = Object.values(sectionPositionsRef.current);
-
 		for (let i = 0; i < positions.length; i++) {
-			if (scrollY >= positions[i] - TAB_HEIGHT) {
+			const currentY = positions[i];
+			const nextY = positions[i + 1] ?? Infinity;
+
+			// When the center of the screen is between this section's start and the next's start
+			if (viewCenterY >= currentY && viewCenterY < nextY) {
 				currentIndex = i;
+				break;
 			}
 		}
 
@@ -175,28 +221,49 @@ export default function RestaurantDetailScreen() {
 		}
 	};
 
+	// const handleScroll = (e) => {
+	// 	const scrollY = e.nativeEvent.contentOffset.y;
+
+	// 	console.log("scrollY", scrollY)
+
+	// 	// Build positions array in order
+	// 	const positions = tabDataSections.map((_, i) => sectionPositionsRef.current[i] ?? 0);
+
+	// 	console.log("positions", positions)
+
+	// 	let currentIndex = 0;
+
+	// 	for (let i = 0; i < positions.length; i++) {
+	// 		const currentY = positions[i];
+	// 		const nextY = positions[i + 1] ?? Infinity;
+
+	// 		// When scrollY is between current section start and next section start
+	// 		if (scrollY >= currentY && scrollY < nextY) {
+	// 			currentIndex = i;
+	// 			break;
+	// 		}
+	// 	}
+
+	// 	if (currentIndex !== tabIndex) {
+	// 		setTabIndex(currentIndex);
+	// 	}
+	// };
+
 	const handlePressTab = (index) => {
+		console.log("handlePressTab", index)
 		setTabIndex(index);
 
 		const pos = sectionPositionsRef.current[index];
 
-		if (menuScrollRef.current && typeof pos === "number") {
+		console.log("pos", pos)
+
+		if (menuScrollRef.current && typeof pos === 'number') {
 			menuScrollRef.current.scrollTo({
-				y: pos - TAB_HEIGHT, // adjust so title stays below tabs
+				y: pos,
 				animated: true,
 			});
 		}
 	};
-
-
-
-	// const handlePressTab = (index) => {
-	// 	setTabIndex(index);
-	// 	const pos = sectionPositionsRef.current[index];
-	// 	if (menuScrollRef.current && typeof pos === 'number') {
-	// 		menuScrollRef.current.scrollTo({ y: pos, animated: true });
-	// 	}
-	// };
 
 	// --- UI Render Functions ---
 	const renderHeader = () => (
@@ -431,8 +498,7 @@ export default function RestaurantDetailScreen() {
 													...option,
 													dish_id: option.self_id,
 													dish_price: option.option_price,
-													dish_name: `${getParentDishName(option.parent_dish_id).replace(/:$/, '')}: ${option.option_name
-														}`,
+													dish_name: `${getParentDishName(option.parent_dish_id).replace(/:$/, '')}: ${option.option_name}`,
 													dish_description: option.option_description,
 												})
 											}
@@ -477,17 +543,23 @@ export default function RestaurantDetailScreen() {
 				{/* Fixed tabs inside card */}
 				<View style={styles.tabsWrapper}>
 					<ScrollView
+						ref={tabsScrollRef}
 						horizontal
 						showsHorizontalScrollIndicator={false}
 						contentContainerStyle={styles.tabsContainer}
 					>
 						{tabCategories.map((tab, index) => (
-							<TouchableOpacity key={tab.label} onPress={() => handlePressTab(index)}>
+							<TouchableOpacity
+								key={tab.label}
+								onPress={() => handlePressTab(index)}
+								onLayout={(e) => {
+									const { x, width } = e.nativeEvent.layout;
+									tabLayoutsRef.current[index] = { x, width };
+								}}
+							>
 								<Text
 									style={
-										tabIndex === index
-											? styles.menuCategoryTextActive
-											: styles.menuCategoryText
+										tabIndex === index ? styles.menuCategoryTextActive : styles.menuCategoryText
 									}
 								>
 									{tab.label}
@@ -513,7 +585,8 @@ export default function RestaurantDetailScreen() {
 							key={section.category}
 							style={styles.menuSectionWrapper}
 							onLayout={(e) => {
-								const y = e.nativeEvent.layout.y;
+								// Adjusted Y so that "0" means section header is just under tabs
+								const y = e.nativeEvent.layout.y - TAB_HEIGHT;
 								sectionPositionsRef.current[index] = y;
 							}}
 						>
@@ -533,8 +606,6 @@ export default function RestaurantDetailScreen() {
 		</View>
 	);
 }
-
-const TAB_HEIGHT = 48; // approximate height of the tabs row
 
 const styles = StyleSheet.create({
 	container: {
@@ -673,8 +744,6 @@ const styles = StyleSheet.create({
 		fontWeight: 'bold',
 		paddingHorizontal: 10,
 		paddingVertical: 15,
-		// borderBottomWidth: 2,
-		// borderBottomColor: COLORS.primary,
 	},
 
 	menuSectionWrapper: {
@@ -853,5 +922,3 @@ const styles = StyleSheet.create({
 		right: 15,
 	},
 });
-
-// app/(tabs)/search/restaurants/details/[restaurantId].jsx

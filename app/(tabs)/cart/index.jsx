@@ -97,8 +97,8 @@ export default function CartScreen() {
 
   const scheduleList = restaurant?.data?.restuarent_schedule?.schedule ?? [];
 
-  console.log('[CartScreen] storeItemList', JSON.stringify(storeItemList));
-  console.log("[CartScreen] carryBag", storeCarryBag)
+  // console.log('[CartScreen] storeItemList', JSON.stringify(storeItemList));
+  // console.log("[CartScreen] carryBag", storeCarryBag)
 
   useEffect(() => {
     if (!scheduleList || scheduleList.length === 0) {
