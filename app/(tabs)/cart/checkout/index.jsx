@@ -180,6 +180,19 @@ export default function CheckoutScreen() {
 		return isOpen;
 	};
 
+	const isCartEmpty = !storeItemList || Object.keys(storeItemList).length === 0;
+
+	console.log("isCartEmpty", isCartEmpty)
+
+	useEffect(() => {
+		if (isCartEmpty) {
+			// 👇 Change this path if your real home is different
+			router.replace('/(tabs)/search');
+		}
+	}, [isCartEmpty]);
+
+
+
 	useEffect(() => {
 		const openNow = isRestaurantOpenNow(restaurantSchedule, storeOrderMode);
 		const nextTiming = openNow ? 'ASAP' : 'Later';
@@ -417,7 +430,7 @@ export default function CheckoutScreen() {
 		};
 		try {
 			const response = await confirmOrder(newPayload);
-			
+
 			if (typeof response === 'string' && response.includes('MySQL server has gone away')) {
 				setVerificationCodePopupVisible(false);
 				alert('Server connection error. Please try again.');
@@ -449,7 +462,7 @@ export default function CheckoutScreen() {
 					},
 				});
 			} else if (response.status === 'Failure') {
-				
+
 				setVerificationCodePopupVisible(false);
 				alert(response.msg);
 				// router.push({

@@ -18,6 +18,7 @@ import Colors from '../../../constants/color';
 import { useIpAddress } from '../../../hooks/useIpAddress';
 import { deleteProfileRequest, verifyDeleteProfileOtp } from '../../../lib/api';
 import { setUser } from '../../../store/slices/authSlice';
+import { clearCart } from '../../../store/slices/cartSlice';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -94,9 +95,15 @@ export default function ProfileScreen() {
   const handleSignOut = async () => {
     await AsyncStorage.removeItem('accessToken');
     await AsyncStorage.removeItem('userData');
+
+    // Clear Redux auth + cart
     dispatch(setUser({ user: null, token: null }));
+    dispatch(clearCart());
+
+    // Just replace to login – no dismissAll
     router.replace('/profile/login');
   };
+
 
   const handleDelete = () => {
     setDeleteConfirmText('');
