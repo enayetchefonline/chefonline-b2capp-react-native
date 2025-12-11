@@ -18,7 +18,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import CustomPopUp from '../../../../components/ui/CustomPopUp';
 import Colors from '../../../../constants/color';
 import { useIpAddress } from '../../../../hooks/useIpAddress';
-import { checkVoucher, confirmOrder, getCarrierBagData } from '../../../../lib/api';
+import { checkVoucher, confirmOrder, getCarrierBagData, getUkIpVerify } from '../../../../lib/api';
 import { getmyguavapay, myguavapayPaymentUpdate } from '../../../../lib/utils/myguava-api';
 import { getAvailableTimeSlots } from '../../../../lib/utils/restaurantSchedule';
 import { getRyftpay } from '../../../../lib/utils/ryftpay-api';
@@ -71,6 +71,10 @@ export default function CheckoutScreen() {
 	const [orderTiming, setOrderTiming] = useState('Later');
 	const [isOrderingOpen, setIsOrderingOpen] = useState(false);
 
+	// 🌍 IP / UK detection state
+	const [insideUkFlag, setInsideUkFlag] = useState(2); // 1 = UK, 2 = non-UK
+	const [ipLookupDone, setIpLookupDone] = useState(false); // true when status === '1'
+
 	// Redux selectors
 	const storeNote = useSelector((state) => state.cart.note);
 	const storeVoucher = useSelector((state) => state.cart.voucher);
@@ -89,11 +93,7 @@ export default function CheckoutScreen() {
 	// console.log("auth user", authUser)
 	// console.log("availablePaymentMethods", availablePaymentMethods)
 
-
-
 	const restaurantSchedule = restaurantDetails?.restuarent_schedule?.schedule || [];
-
-
 
 	// console.log("restaurantSchedule", JSON.stringify(restaurantSchedule, null, 2));
 
@@ -198,9 +198,6 @@ export default function CheckoutScreen() {
 		}, [isLoggedIn, hasCartItems, router])
 	);
 
-
-
-
 	useEffect(() => {
 		const openNow = isRestaurantOpenNow(restaurantSchedule, storeOrderMode);
 		const nextTiming = openNow ? 'ASAP' : 'Later';
@@ -212,9 +209,44 @@ export default function CheckoutScreen() {
 		// console.log("isOrderingOpen (boolean)....", openNow);
 	}, [restaurantSchedule, storeOrderMode]);
 
-	// console.log("orderTiming (ASAP or Later)....", orderTiming);
+	// ✅ Check UK IP and set inside_uk flag
+	const checkUkIpAddress = async () => {
+		try {
+			const response = await getUkIpVerify();
+			console.log('getUkIpVerify', response);
 
+			if (response?.status === '1') {
+				setIpLookupDone(true);
+
+				const country = response?.details?.country;
+				const isUK = country === 'UK';
+
+				// ✅ Inside UK = 1
+				// ❌ Outside UK = 2
+				setInsideUkFlag(isUK ? 1 : 2);
+			} else {
+				// lookup failed → treat as non-UK
+				setIpLookupDone(false);
+				setInsideUkFlag(2);
+			}
+		} catch (error) {
+			console.error('Failed to fetch IP:', error);
+
+			// API error → treat as non-UK
+			setIpLookupDone(false);
+			setInsideUkFlag(2);
+		}
+	};
+
+	// const isInsideUk = useSelector((state) => state.auth.ukIp);
+
+	useEffect(() => {
+		checkUkIpAddress();
+	}, []);
+
+	// console.log("orderTiming (ASAP or Later)....", orderTiming);
 	// Convert "12:00 PM" -> minutes since midnight
+
 	const parseTimeToMinutes = (timeStr) => {
 		if (!timeStr) return null;
 		const [time, period] = timeStr.split(' '); // "12:00", "PM"
@@ -473,20 +505,6 @@ export default function CheckoutScreen() {
 
 				setVerificationCodePopupVisible(false);
 				alert(response.msg);
-				// router.push({
-				// 	pathname: '/order-success',
-				// 	params: {
-				// 		orderId: response.order_ID,
-				// 		status: response.status,
-				// 		message: response.msg,
-				// 		transactionId: response.transaction_id,
-				// 		items: JSON.stringify(itemList),
-				// 		discount: discountVal.toFixed(2),
-				// 		carrybag: carryBagTotal.toFixed(2),
-				// 		delivery: deliveryCharge.toFixed(2),
-				// 		total: finalTotalWithCarryBag.toFixed(2),
-				// 	},
-				// });
 			}
 		} catch {
 			setVoucherValidationMessage('Something went wrong. Please try again.');
@@ -547,28 +565,6 @@ export default function CheckoutScreen() {
 
 		const selectedOrderPolicy = restaurantDetails?.order_policy?.policy?.find((p) => p.policy_name === storeOrderMode);
 		const orderPolicyId = selectedOrderPolicy?.policy_id || '';
-		// const payload = {
-		// 	user_id: authUser?.userid || '',
-		// 	order_policy_id: orderPolicyId,
-		// 	OrderList: orderList,
-		// 	post_code: authUser?.postcode || '',
-		// 	address: authUser?.address1 || '',
-		// 	city: authUser?.town || '',
-		// 	payment_option: paymentMethod === 'Card' ? 12 : 0,
-		// 	total_amount: subtotal.toFixed(2),
-		// 	grand_total: finalTotalWithCarryBag.toFixed(2),
-		// 	discount_id: storeVoucher?.id ? '' : storeSelectedDiscountId || '',
-		// 	voucher_id: storeVoucher?.id || '',
-		// 	offer_id: storeVoucher?.id ? '' : storeSelectedOfferId || '',
-		// 	pre_order_delivery_time: selectedTime,
-		// 	comments: specialNote,
-		// 	delivery_charge: deliveryCharge.toFixed(2),
-		// 	rest_id: restaurantId,
-		// 	carrierBag: carrierBagFinalPayload,
-		// 	platform: Platform.OS === 'ios' ? 1 : 2,
-		// 	...(donationNum && donationConfirmed ? { donate_amount: donationNum } : {}),
-		// };
-
 
 		// build offer payload in required format: [{"offer_id": 1661}]
 		let offerPayload = '';
@@ -591,7 +587,6 @@ export default function CheckoutScreen() {
 			grand_total: finalTotalWithCarryBag.toFixed(2),
 			discount_id: storeVoucher?.id ? '' : storeSelectedDiscountId || '',
 			voucher_id: storeVoucher?.id || '',
-			// ✅ now in format: [{"offer_id": 1661}] or ""
 			offer_id: offerPayload,
 			pre_order_delivery_time: selectedTime,
 			comments: specialNote,
@@ -600,11 +595,9 @@ export default function CheckoutScreen() {
 			carrierBag: carrierBagFinalPayload,
 			platform: Platform.OS === 'ios' ? 1 : 2,
 			ip_address: ipAddress || '',
+			inside_uk: insideUkFlag,
 			...(donationNum && donationConfirmed ? { donate_amount: donationNum } : {}),
 		};
-
-
-
 
 		// console.log("checkout payload....", JSON.stringify(payload));
 
@@ -628,10 +621,22 @@ export default function CheckoutScreen() {
 					paymentSuccess(response);
 				}
 			} else if (response.status === 'sms_sent') {
-				setVerificationCodePopupVisible(true);
-				setLastOrderPayload({ ...payload });
-				// console.log("order submit otp", response.code)
-				setVerificationCode(response.code || '');
+				// 🟢 Inside UK → NO OTP → proceed normally
+				if (insideUkFlag === 1) {
+					if (selectedPaymentSettingID != 0 && paymentMethod === 'Card') {
+						await paymentGatewayHandler(response);
+					} else {
+						paymentSuccess(response);
+					}
+				}
+
+				// 🔴 Outside UK → SHOW OTP POPUP
+				else {
+					setVerificationCodePopupVisible(true);
+					setLastOrderPayload({ ...payload });
+					// setVerificationCode(response.code || '');
+				}
+
 			} else if (response.status === 'Failed' && Object.keys(storeItemList).length > 0) {
 				setErrorMessage('Order failed. Please try again later.');
 				setErrorPopupVisible(true);
@@ -766,7 +771,6 @@ export default function CheckoutScreen() {
 			return acc;
 		}, [])
 		: [];
-
 
 	// --- RENDER ---
 	return (
