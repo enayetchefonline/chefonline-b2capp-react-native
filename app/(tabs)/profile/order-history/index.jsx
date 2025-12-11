@@ -3,13 +3,17 @@ import { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
+    Keyboard,
+    KeyboardAvoidingView,
     Modal,
+    Platform,
     Pressable,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    TouchableWithoutFeedback,
+    View
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useSelector } from 'react-redux';
@@ -320,56 +324,66 @@ export default function OrderHistoryScreen() {
                     if (!submittingRating) setRatingVisible(false);
                 }}
             >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalCard}>
-                        <Text style={styles.modalTitle}>Rate your order</Text>
+                <KeyboardAvoidingView
+                    style={{ flex: 1 }}
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+                // ⬆️ tweak offset if you have a header/tabbar overlapping
+                >
+                    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                        <View style={styles.modalOverlay}>
+                            <View style={styles.modalCard}>
+                                <Text style={styles.modalTitle}>Rate your order</Text>
 
-                        <View style={styles.modalRow}>
-                            <View style={styles.ratingItem}>
-                                <Text style={styles.label}>QUALITY OF FOOD</Text>
-                                {renderStars(foodRating, setFoodRating)}
-                            </View>
+                                <View style={styles.modalRow}>
+                                    <View style={styles.ratingItem}>
+                                        <Text style={styles.label}>QUALITY OF FOOD</Text>
+                                        {renderStars(foodRating, setFoodRating)}
+                                    </View>
 
-                            <View style={styles.ratingItem}>
-                                <Text style={styles.label}>QUALITY OF SERVICE</Text>
-                                {renderStars(serviceRating, setServiceRating)}
-                            </View>
+                                    <View style={styles.ratingItem}>
+                                        <Text style={styles.label}>QUALITY OF SERVICE</Text>
+                                        {renderStars(serviceRating, setServiceRating)}
+                                    </View>
 
-                            <View style={styles.ratingItem}>
-                                <Text style={styles.label}>VALUE OF MONEY</Text>
-                                {renderStars(valueRating, setValueRating)}
+                                    <View style={styles.ratingItem}>
+                                        <Text style={styles.label}>VALUE OF MONEY</Text>
+                                        {renderStars(valueRating, setValueRating)}
+                                    </View>
+                                </View>
+
+                                <TextInput
+                                    style={styles.commentInput}
+                                    placeholder="Write From Here..."
+                                    placeholderTextColor={Colors.placeholder}
+                                    multiline
+                                    value={comment}
+                                    onChangeText={setComment}
+                                    editable={!submittingRating}
+                                />
+
+                                <View style={styles.modalButtons}>
+                                    <CustomButton
+                                        title="CANCEL"
+                                        onPress={() => !submittingRating && setRatingVisible(false)}
+                                        containerStyle={[styles.btnHalf, { marginRight: 8 }]}
+                                    />
+                                    <CustomButton
+                                        title="SUBMIT"
+                                        iconName="send-outline"
+                                        loading={submittingRating}
+                                        loadingText="Submitting…"
+                                        onPress={handleSubmitRating}
+                                        disabled={submittingRating || !comment.trim()}
+                                        containerStyle={styles.btnHalf}
+                                    />
+                                </View>
                             </View>
                         </View>
-
-                        <TextInput
-                            style={styles.commentInput}
-                            placeholder="Write From Here..."
-                            placeholderTextColor={Colors.placeholder}
-                            multiline
-                            value={comment}
-                            onChangeText={setComment}
-                            editable={!submittingRating}
-                        />
-
-                        <View style={styles.modalButtons}>
-                            <CustomButton
-                                title="CANCEL"
-                                onPress={() => !submittingRating && setRatingVisible(false)}
-                                containerStyle={[styles.btnHalf, { marginRight: 8 }]}
-                            />
-                            <CustomButton
-                                title="SUBMIT"
-                                iconName="send-outline"
-                                loading={submittingRating}
-                                loadingText="Submitting…"
-                                onPress={handleSubmitRating}
-                                disabled={submittingRating || !comment.trim()}
-                                containerStyle={styles.btnHalf}
-                            />
-                        </View>
-                    </View>
-                </View>
+                    </TouchableWithoutFeedback>
+                </KeyboardAvoidingView>
             </Modal>
+
 
             {/* ⭐ Success popup */}
             <CustomPopUp

@@ -1,6 +1,6 @@
 import { Picker } from '@react-native-picker/picker';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import {
 	ActivityIndicator,
 	Modal,
@@ -93,6 +93,8 @@ export default function CheckoutScreen() {
 
 	const restaurantSchedule = restaurantDetails?.restuarent_schedule?.schedule || [];
 
+
+
 	// console.log("restaurantSchedule", JSON.stringify(restaurantSchedule, null, 2));
 
 	// Controlled input values
@@ -102,6 +104,10 @@ export default function CheckoutScreen() {
 
 	// IP address via reusable hook
 	const { ipAddress } = useIpAddress();
+
+	// ✅ derived flags for auth + cart
+	const isLoggedIn = !!authUser;
+	const hasCartItems = !!storeItemList && Object.keys(storeItemList).length > 0;
 
 	const isRestaurantOpenNow = (schedule, orderMode) => {
 		if (!Array.isArray(schedule) || schedule.length === 0) {
@@ -180,16 +186,18 @@ export default function CheckoutScreen() {
 		return isOpen;
 	};
 
-	const isCartEmpty = !storeItemList || Object.keys(storeItemList).length === 0;
+	// const isCartEmpty = Object.keys(storeItemList).length === 0;
 
-	console.log("isCartEmpty", isCartEmpty)
+	// ✅ When screen comes into focus, protect against logout / empty cart
+	useFocusEffect(
+		useCallback(() => {
+			if (!isLoggedIn || !hasCartItems) {
+				// Go back to Cart tab main screen
+				router.replace('/(tabs)/search');
+			}
+		}, [isLoggedIn, hasCartItems, router])
+	);
 
-	useEffect(() => {
-		if (isCartEmpty) {
-			// 👇 Change this path if your real home is different
-			router.replace('/(tabs)/search');
-		}
-	}, [isCartEmpty]);
 
 
 
