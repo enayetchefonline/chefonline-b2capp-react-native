@@ -1,6 +1,6 @@
 import { Picker } from '@react-native-picker/picker';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
 	ActivityIndicator,
 	Modal,
@@ -189,14 +189,14 @@ export default function CheckoutScreen() {
 	// const isCartEmpty = Object.keys(storeItemList).length === 0;
 
 	// ✅ When screen comes into focus, protect against logout / empty cart
-	useFocusEffect(
-		useCallback(() => {
-			if (!isLoggedIn || !hasCartItems) {
-				// Go back to Cart tab main screen
-				router.replace('/(tabs)/search');
-			}
-		}, [isLoggedIn, hasCartItems, router])
-	);
+	// useFocusEffect(
+	// 	useCallback(() => {
+	// 		if (!isLoggedIn || !hasCartItems) {
+	// 			// Go back to search tab main screen
+	// 			router.replace('/(tabs)/profile/login');
+	// 		}
+	// 	}, [isLoggedIn, hasCartItems, router])
+	// );
 
 	useEffect(() => {
 		const openNow = isRestaurantOpenNow(restaurantSchedule, storeOrderMode);

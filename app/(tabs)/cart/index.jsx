@@ -156,40 +156,40 @@ export default function CartScreen() {
 
   const hasCarryBag = !!(storeItemList && storeItemList['carry_bag']);
 
-const loadCarryBag = useCallback(
-  async () => {
-    if (!restaurantId) return;
+  const loadCarryBag = useCallback(
+    async () => {
+      if (!restaurantId) return;
 
-    // 🔒 If carry bag already in cart, don't call API or re-add
-    if (hasCarryBag) {
-      console.log('[CarryBag] Already in cart, skipping API + addItemToCart');
-      return;
-    }
-
-    try {
-      console.log('[CarryBag] loadCarryBag called with restId:', restaurantId);
-      const response = await carrierBag({ restId: restaurantId });
-      console.log('[CarryBag] API response:', response);
-
-      if (response?.restaurant_service_id && parseFloat(response.price) > 0) {
-        const carryBagItem = {
-          dish_id: 'carry_bag',
-          dish_name: 'Carry Bag',
-          dish_price: response.price,
-        };
-
-        console.log('[CarryBag] Dispatching setCarryBag + addItemToCart for carry_bag');
-        dispatch(setCarryBag(response));
-        dispatch(addItemToCart(carryBagItem));
-      } else {
-        console.log('[CarryBag] No valid carry bag returned from API:', response);
+      // 🔒 If carry bag already in cart, don't call API or re-add
+      if (hasCarryBag) {
+        console.log('[CarryBag] Already in cart, skipping API + addItemToCart');
+        return;
       }
-    } catch (err) {
-      console.error('❌ Failed to load carry bag:', err);
-    }
-  },
-  [restaurantId, dispatch, hasCarryBag]
-);
+
+      try {
+        console.log('[CarryBag] loadCarryBag called with restId:', restaurantId);
+        const response = await carrierBag({ restId: restaurantId });
+        console.log('[CarryBag] API response:', response);
+
+        if (response?.restaurant_service_id && parseFloat(response.price) > 0) {
+          const carryBagItem = {
+            dish_id: 'carry_bag',
+            dish_name: 'Carry Bag',
+            dish_price: response.price,
+          };
+
+          console.log('[CarryBag] Dispatching setCarryBag + addItemToCart for carry_bag');
+          dispatch(setCarryBag(response));
+          dispatch(addItemToCart(carryBagItem));
+        } else {
+          console.log('[CarryBag] No valid carry bag returned from API:', response);
+        }
+      } catch (err) {
+        console.error('❌ Failed to load carry bag:', err);
+      }
+    },
+    [restaurantId, dispatch, hasCarryBag]
+  );
 
 
   // 👉 Load carry bag when restaurant & cart items exist
@@ -200,55 +200,111 @@ const loadCarryBag = useCallback(
   // - there is at least 1 non-carry-bag item
   // - carry bag is not already in cart
   // - and we haven't already requested auto-add in this mount
-useEffect(() => {
-  if (!restaurantId) return;
-  if (carryBagDisabled) {
-    console.log('[CarryBagEffect] carryBagDisabled = true, skipping auto-add.');
-    return;
-  }
+  useEffect(() => {
+    if (!restaurantId) return;
+    if (carryBagDisabled) {
+      console.log('[CarryBagEffect] carryBagDisabled = true, skipping auto-add.');
+      return;
+    }
 
-  const hadNonCarryBefore = prevHasNonCarryItemsRef.current;
-  const hasNonCarryNow = hasNonCarryItems;
+    const hadNonCarryBefore = prevHasNonCarryItemsRef.current;
+    const hasNonCarryNow = hasNonCarryItems;
 
-  console.log(
-    '[CarryBagEffect] restaurantId:',
-    restaurantId,
-    '| hadNonCarryBefore:',
-    hadNonCarryBefore,
-    '| hasNonCarryNow:',
-    hasNonCarryNow,
-    '| hasCarryBag:',
-    hasCarryBag,
-    '| autoCarryBagRequested:',
-    autoCarryBagRequestedRef.current
-  );
+    console.log(
+      '[CarryBagEffect] restaurantId:',
+      restaurantId,
+      '| hadNonCarryBefore:',
+      hadNonCarryBefore,
+      '| hasNonCarryNow:',
+      hasNonCarryNow,
+      '| hasCarryBag:',
+      hasCarryBag,
+      '| autoCarryBagRequested:',
+      autoCarryBagRequestedRef.current
+    );
 
-  // Only trigger when:
-  // - Previously: NO non-carry items
-  // - Now: there IS at least 1 non-carry item
-  // - There is NO carry bag yet
-  // - We HAVEN'T already auto-requested carry bag in this cart lifecycle
-  if (
-    !hadNonCarryBefore &&
-    hasNonCarryNow &&
-    !hasCarryBag &&
-    !autoCarryBagRequestedRef.current
-  ) {
-    console.log('[CarryBagEffect] Transition detected (false -> true) and no carry bag. Auto-adding carry bag.');
-    autoCarryBagRequestedRef.current = true;
-    loadCarryBag();
-  } else {
-    console.log('[CarryBagEffect] No auto-add. Condition not met.');
-  }
+    // ✅ Case 1: cart goes from 0 → at least 1 non-carry item → auto add carry bag
+    if (
+      !hadNonCarryBefore &&
+      hasNonCarryNow &&
+      !hasCarryBag &&
+      !autoCarryBagRequestedRef.current
+    ) {
+      console.log('[CarryBagEffect] Transition detected (false -> true) and no carry bag. Auto-adding carry bag.');
+      autoCarryBagRequestedRef.current = true;
+      loadCarryBag();
+    }
+    // ✅ NEW: Case 2: cart goes from having non-carry items → NO non-carry items → remove carry bag
+    else if (
+      hadNonCarryBefore &&
+      !hasNonCarryNow &&
+      hasCarryBag
+    ) {
+      console.log('[CarryBagEffect] No non-carry items left. Removing carry bag.');
+      // set quantity to 0 → same pattern as your decreaseQty logic
+      dispatch(updateItemQuantity({ itemId: 'carry_bag', quantity: 0 }));
+    } else {
+      console.log('[CarryBagEffect] No auto-add/remove. Condition not met.');
+    }
 
-  // update ref for next render
-  prevHasNonCarryItemsRef.current = hasNonCarryNow;
+    // update ref for next render
+    prevHasNonCarryItemsRef.current = hasNonCarryNow;
 
-  // Optional: reset auto flag if cart becomes empty & no carry bag
-  if (!hasNonCarryNow && !hasCarryBag) {
-    autoCarryBagRequestedRef.current = false;
-  }
-}, [restaurantId, hasNonCarryItems, hasCarryBag, carryBagDisabled, loadCarryBag]);
+    // Optional: reset auto flag if cart becomes empty & no carry bag
+    if (!hasNonCarryNow && !hasCarryBag) {
+      autoCarryBagRequestedRef.current = false;
+    }
+  }, [restaurantId, hasNonCarryItems, hasCarryBag, carryBagDisabled, loadCarryBag, dispatch]);
+
+  // useEffect(() => {
+  //   if (!restaurantId) return;
+  //   if (carryBagDisabled) {
+  //     console.log('[CarryBagEffect] carryBagDisabled = true, skipping auto-add.');
+  //     return;
+  //   }
+
+  //   const hadNonCarryBefore = prevHasNonCarryItemsRef.current;
+  //   const hasNonCarryNow = hasNonCarryItems;
+
+  //   console.log(
+  //     '[CarryBagEffect] restaurantId:',
+  //     restaurantId,
+  //     '| hadNonCarryBefore:',
+  //     hadNonCarryBefore,
+  //     '| hasNonCarryNow:',
+  //     hasNonCarryNow,
+  //     '| hasCarryBag:',
+  //     hasCarryBag,
+  //     '| autoCarryBagRequested:',
+  //     autoCarryBagRequestedRef.current
+  //   );
+
+  //   // Only trigger when:
+  //   // - Previously: NO non-carry items
+  //   // - Now: there IS at least 1 non-carry item
+  //   // - There is NO carry bag yet
+  //   // - We HAVEN'T already auto-requested carry bag in this cart lifecycle
+  //   if (
+  //     !hadNonCarryBefore &&
+  //     hasNonCarryNow &&
+  //     !hasCarryBag &&
+  //     !autoCarryBagRequestedRef.current
+  //   ) {
+  //     console.log('[CarryBagEffect] Transition detected (false -> true) and no carry bag. Auto-adding carry bag.');
+  //     autoCarryBagRequestedRef.current = true;
+  //     loadCarryBag();
+  //   } else {
+  //     console.log('[CarryBagEffect] No auto-add. Condition not met.');
+  //   }
+
+  //   // update ref for next render
+  //   prevHasNonCarryItemsRef.current = hasNonCarryNow;
+
+  //   // Optional: reset auto flag if cart becomes empty & no carry bag
+  //   if (!hasNonCarryNow && !hasCarryBag) {
+  //     autoCarryBagRequestedRef.current = false;
+  //   }
+  // }, [restaurantId, hasNonCarryItems, hasCarryBag, carryBagDisabled, loadCarryBag]);
 
 
   // 👉 Only reset mode when cart becomes completely empty
