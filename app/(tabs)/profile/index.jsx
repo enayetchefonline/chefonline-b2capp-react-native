@@ -100,8 +100,9 @@ export default function ProfileScreen() {
     dispatch(setUser({ user: null, token: null }));
     dispatch(clearCart());
 
-    // Just replace to login – no dismissAll
-    router.replace('/profile/login');
+    console.log("sign out")
+
+    router.replace('/(tabs)/search');
   };
 
 

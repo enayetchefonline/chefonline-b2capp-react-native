@@ -1,6 +1,6 @@
-import {Stack, useRouter} from 'expo-router';
-import {StyleSheet, Text, TouchableOpacity} from 'react-native';
-import {useSelector} from 'react-redux';
+import { Stack, useRouter } from 'expo-router';
+import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { useSelector } from 'react-redux';
 import Colors from '../../../constants/color';
 
 export default function Layout() {
@@ -9,11 +9,13 @@ export default function Layout() {
 	const restaurantId = useSelector((state) => state.cart.restaurantId);
 
 	return (
-		<Stack screenOptions={{headerShown: true, headerTitleAlign: 'left'}}>
+		<Stack screenOptions={{ headerShown: true, headerTitleAlign: 'left' }}>
 			<Stack.Screen
 				name="index"
 				options={{
 					headerTitle: 'Your Cart',
+					headerLeft: () => null,
+					headerBackVisible: false,
 					headerRight: () =>
 						Object.keys(cart).length > 0 ? (
 							<TouchableOpacity
@@ -25,9 +27,9 @@ export default function Layout() {
 						) : null,
 				}}
 			/>
-			<Stack.Screen name="checkout/index" options={{headerTitle: 'Checkout'}} />
-			<Stack.Screen name="delivery/index" options={{headerTitle: 'Delivery Detail'}} />
-			<Stack.Screen name="order-success/index" options={{headerTitle: 'Order Success'}} />
+			<Stack.Screen name="checkout/index" options={{ headerTitle: 'Checkout' }} />
+			<Stack.Screen name="delivery/index" options={{ headerTitle: 'Delivery Detail' }} />
+			<Stack.Screen name="order-success/index" options={{ headerTitle: 'Order Success' }} />
 		</Stack>
 	);
 }

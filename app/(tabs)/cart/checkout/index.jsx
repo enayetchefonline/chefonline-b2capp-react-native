@@ -1080,7 +1080,7 @@ export default function CheckoutScreen() {
 			>
 				<TextInput
 					style={styles.popupInputSingleLine}
-					placeholder="Enter 4-digit code"
+					placeholder="Enter OTP code"
 					keyboardType="numeric"
 					value={verificationCode}
 					onChangeText={setVerificationCode}

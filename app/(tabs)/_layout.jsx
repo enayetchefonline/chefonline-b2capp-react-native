@@ -1,86 +1,122 @@
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { Snackbar } from 'react-native-paper';
 import { useSelector } from 'react-redux';
 
 export default function TabLayout() {
 	const cartItems = useSelector((state) => state.cart.items);
 	const cartCount = Object.keys(cartItems).length;
+	const router = useRouter();
+
+	const [snackbarVisible, setSnackbarVisible] = useState(false);
 
 	return (
-		<Tabs
-			screenOptions={{
-				headerShown: false,
-				tabBarActiveTintColor: 'red',
-				tabBarInactiveTintColor: 'gray',
-				tabBarStyle: { backgroundColor: 'white' },
-				tabBarLabelStyle: {
-					fontSize: 12,
-					textAlign: 'center',
-					marginBottom: 5,
-				},
-				tabBarIconStyle: {
-					alignSelf: 'center',
-					marginBottom: 0,
-				},
-				tabBarIndicatorStyle: {
-					backgroundColor: 'red',
-				},
-				tabBarLabelPosition: 'below-icon',
-			}}
-		>
-			<Tabs.Screen
-				name="search"
-				options={{
-					title: 'Search',
-					tabBarIcon: ({ color, size }) => <Ionicons name="search" color={color} size={size} />,
+		<>
+			<Tabs
+				screenOptions={{
+					headerShown: false,
+					tabBarActiveTintColor: 'red',
+					tabBarInactiveTintColor: 'gray',
+					tabBarStyle: { backgroundColor: 'white' },
+					tabBarLabelStyle: { fontSize: 12, marginBottom: 5 },
+					tabBarLabelPosition: 'below-icon',
 				}}
-			/>
-			<Tabs.Screen
-				name="cart"
-				options={{
-					title: 'Cart',
-					tabBarIcon: ({ color, size }) => (
-						<View>
-							<FontAwesome name="shopping-cart" color={color} size={size} />
-							{cartCount > 0 && (
-								<View style={styles.badge}>
-									<Text style={styles.badgeText}>{cartCount}</Text>
-								</View>
-							)}
-						</View>
-					),
+			>
+				<Tabs.Screen
+					name="search"
+					options={{
+						title: 'Search',
+						tabBarIcon: ({ color, size }) => (
+							<Ionicons name="search" color={color} size={size} />
+						),
+					}}
+				/>
 
-				}}
-				// listeners={({ navigation }) => ({
-				// 	tabPress: (e) => {
-				// 		console.log("Cart tab pressed");
+				<Tabs.Screen
+					name="cart"
+					options={{
+						title: 'Cart',
+						unmountOnBlur: true,
+						href: cartCount === 0 ? null : undefined, // ✅ hide tab completely
+						tabBarIcon: ({ color }) => (
+							<View>
+								<FontAwesome name="shopping-cart" color={color} size={22} />
+								{cartCount > 0 && (
+									<View style={styles.badge}>
+										<Text style={styles.badgeText}>{cartCount}</Text>
+									</View>
+								)}
+							</View>
+						),
+					}}
+				/>
 
-				// 		if (cartCount === 0) {
-				// 			e.preventDefault();
-				// 			navigation.navigate('search');   // ✅ Correct route name
-				// 		}
-				// 	},
-				// })}
+				{/* <Tabs.Screen
+					name="cart"
+					options={{
+						title: 'Cart',
+						tabBarIcon: ({ color }) => (
+							<View>
+								<FontAwesome name="shopping-cart" color={color} size={22} />
+								{cartCount > 0 && (
+									<View style={styles.badge}>
+										<Text style={styles.badgeText}>{cartCount}</Text>
+									</View>
+								)}
+							</View>
+						),
+					}}
+					listeners={() => ({
+						tabPress: (e) => {
+							if (cartCount === 0) {
+								e.preventDefault();
+								setSnackbarVisible(true);
 
-			/>
-			<Tabs.Screen
-				name="profile"
-				options={{
-					title: 'Profile',
-					tabBarIcon: ({ color, size }) => <FontAwesome name="user" color={color} size={size} />,
-				}}
-			/>
-			<Tabs.Screen
-				name="settings"
-				options={{
-					title: 'Settings',
-					tabBarIcon: ({ color, size }) => <Ionicons name="settings" color={color} size={size} />,
-				}}
-			/>
-		</Tabs>
+								setTimeout(() => {
+									router.replace('/(tabs)/search');
+								}, 300);
+							}
+						},
+					})}
+				/> */}
+
+
+				<Tabs.Screen
+					name="profile"
+					options={{
+						title: 'Profile',
+						tabBarIcon: ({ color }) => (
+							<FontAwesome name="user" color={color} size={22} />
+						),
+					}}
+				/>
+
+				<Tabs.Screen
+					name="settings"
+					options={{
+						title: 'Settings',
+						tabBarIcon: ({ color }) => (
+							<Ionicons name="settings" color={color} size={22} />
+						),
+					}}
+				/>
+			</Tabs>
+
+			{/* 🔔 Snackbar */}
+			<Snackbar
+				visible={snackbarVisible}
+				onDismiss={() => setSnackbarVisible(false)}
+				duration={2000}
+				style={{ backgroundColor: '#333' }}
+			>
+				Cart is empty. Please add items first.
+			</Snackbar>
+		</>
 	);
 }
+
 
 const styles = StyleSheet.create({
 	badge: {
