@@ -8,8 +8,9 @@ import { useSelector } from 'react-redux';
 export default function TabLayout() {
 	const cartItems = useSelector((state) => state.cart.items);
 	const cartCount = Object.keys(cartItems).length;
-	const router = useRouter();
+	const cartEnabled = cartCount > 0;
 
+	const router = useRouter();
 	const [snackbarVisible, setSnackbarVisible] = useState(false);
 
 	return (
@@ -24,6 +25,7 @@ export default function TabLayout() {
 					tabBarLabelPosition: 'below-icon',
 				}}
 			>
+				{/* SEARCH TAB */}
 				<Tabs.Screen
 					name="search"
 					options={{
@@ -34,55 +36,41 @@ export default function TabLayout() {
 					}}
 				/>
 
+				{/* CART TAB (CRITICAL FIX) */}
 				<Tabs.Screen
+					key={cartEnabled ? 'cart-enabled' : 'cart-disabled'} // 🔥 forces remount
 					name="cart"
 					options={{
 						title: 'Cart',
-						unmountOnBlur: true,
-						href: cartCount === 0 ? null : undefined, // ✅ hide tab completely
+						href: cartEnabled ? undefined : null, // hide if empty
+						unmountOnBlur: true,                  // reset stack when switching tabs
 						tabBarIcon: ({ color }) => (
 							<View>
 								<FontAwesome name="shopping-cart" color={color} size={22} />
-								{cartCount > 0 && (
+								{cartEnabled && (
 									<View style={styles.badge}>
 										<Text style={styles.badgeText}>{cartCount}</Text>
 									</View>
 								)}
 							</View>
 						),
+					}}
+					listeners={{
+						tabPress: (e) => {
+							if (!cartEnabled) {
+								e.preventDefault();
+								setSnackbarVisible(true);
+								return;
+							}
+
+							// 🔥 ALWAYS OPEN CART INDEX (NEVER CHECKOUT)
+							e.preventDefault();
+							router.replace('/(tabs)/cart');
+						},
 					}}
 				/>
 
-				{/* <Tabs.Screen
-					name="cart"
-					options={{
-						title: 'Cart',
-						tabBarIcon: ({ color }) => (
-							<View>
-								<FontAwesome name="shopping-cart" color={color} size={22} />
-								{cartCount > 0 && (
-									<View style={styles.badge}>
-										<Text style={styles.badgeText}>{cartCount}</Text>
-									</View>
-								)}
-							</View>
-						),
-					}}
-					listeners={() => ({
-						tabPress: (e) => {
-							if (cartCount === 0) {
-								e.preventDefault();
-								setSnackbarVisible(true);
-
-								setTimeout(() => {
-									router.replace('/(tabs)/search');
-								}, 300);
-							}
-						},
-					})}
-				/> */}
-
-
+				{/* PROFILE TAB */}
 				<Tabs.Screen
 					name="profile"
 					options={{
@@ -93,6 +81,7 @@ export default function TabLayout() {
 					}}
 				/>
 
+				{/* SETTINGS TAB */}
 				<Tabs.Screen
 					name="settings"
 					options={{
@@ -104,7 +93,7 @@ export default function TabLayout() {
 				/>
 			</Tabs>
 
-			{/* 🔔 Snackbar */}
+			{/* SNACKBAR */}
 			<Snackbar
 				visible={snackbarVisible}
 				onDismiss={() => setSnackbarVisible(false)}
@@ -116,7 +105,6 @@ export default function TabLayout() {
 		</>
 	);
 }
-
 
 const styles = StyleSheet.create({
 	badge: {

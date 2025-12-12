@@ -1,4 +1,4 @@
-import { Stack, useRouter } from 'expo-router';
+import { Redirect, Stack, useRouter } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { useSelector } from 'react-redux';
 import Colors from '../../../constants/color';
@@ -8,6 +8,14 @@ export default function Layout() {
 	const cart = useSelector((state) => state.cart.items);
 	const restaurantId = useSelector((state) => state.cart.restaurantId);
 
+	const cartCount = cart ? Object.keys(cart).length : 0;
+
+	// ✅ SAFE: Redirect is allowed during render
+	// If you want to block entering cart stack when empty (optional)
+	if (!cart || cartCount === 0) {
+		return <Redirect href="/(tabs)/search" />;
+	}
+
 	return (
 		<Stack screenOptions={{ headerShown: true, headerTitleAlign: 'left' }}>
 			<Stack.Screen
@@ -16,17 +24,17 @@ export default function Layout() {
 					headerTitle: 'Your Cart',
 					headerLeft: () => null,
 					headerBackVisible: false,
-					headerRight: () =>
-						Object.keys(cart).length > 0 ? (
-							<TouchableOpacity
-								style={styles.addMoreButton}
-								onPress={() => router.push(`/search/restaurants/details/${restaurantId}`)}
-							>
-								<Text style={styles.addMoreText}>Add More</Text>
-							</TouchableOpacity>
-						) : null,
+					headerRight: () => (
+						<TouchableOpacity
+							style={styles.addMoreButton}
+							onPress={() => router.push(`/search/restaurants/details/${restaurantId}`)}
+						>
+							<Text style={styles.addMoreText}>Add More</Text>
+						</TouchableOpacity>
+					),
 				}}
 			/>
+
 			<Stack.Screen name="checkout/index" options={{ headerTitle: 'Checkout' }} />
 			<Stack.Screen name="delivery/index" options={{ headerTitle: 'Delivery Detail' }} />
 			<Stack.Screen name="order-success/index" options={{ headerTitle: 'Order Success' }} />
