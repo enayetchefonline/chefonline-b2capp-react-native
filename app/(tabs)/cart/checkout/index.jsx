@@ -1082,7 +1082,10 @@ export default function CheckoutScreen() {
 				title="Verify it's you"
 				message={`A verification code has been sent to your registered mobile number ${authUser?.mobile_no}. Please enter the code to proceed.`}
 				showCancel
-				onCancel={() => setVerificationCodePopupVisible(false)}
+				onCancel={() => {
+					setVerificationCodePopupVisible(false)
+					setVerificationCode('');
+				}}
 				onConfirm={handleVerificationSubmit}
 				confirmLoading={verificationLoading}
 				disableConfirm={verificationLoading}
