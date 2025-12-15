@@ -475,6 +475,7 @@ export default function CheckoutScreen() {
 
 			if (typeof response === 'string' && response.includes('MySQL server has gone away')) {
 				setVerificationCodePopupVisible(false);
+				setVerificationCode('');
 				alert('Server connection error. Please try again.');
 				return;
 			}
@@ -482,6 +483,7 @@ export default function CheckoutScreen() {
 
 			if (typeof response === 'string' && response.includes('MySQL server has gone away1909')) {
 				setVerificationCodePopupVisible(false);
+				setVerificationCode('');
 				alert('Server connection error. Please try again.');
 				return;
 			}
@@ -489,6 +491,7 @@ export default function CheckoutScreen() {
 			if (response.status === 'Failed') {
 				// setVerificationCodePopupVisible(false);
 				alert(response.msg);
+				setVerificationCode('');
 				return;
 			}
 
@@ -513,6 +516,7 @@ export default function CheckoutScreen() {
 			} else if (response.status === 'Failure') {
 
 				setVerificationCodePopupVisible(false);
+				setVerificationCode('');
 				alert(response.msg);
 			}
 		} catch {
