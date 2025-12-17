@@ -1,7 +1,8 @@
 // app/(tabs)/profile/index.js
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   StyleSheet,
@@ -42,28 +43,45 @@ export default function ProfileScreen() {
   const { ipAddress } = useIpAddress();
 
   // ✅ Only hydrate from AsyncStorage if Redux has no user yet
-  useEffect(() => {
-    const loadUserData = async () => {
-      if (user) {
-        setLoading(false);
-        return;
-      }
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
 
-      const storedUser = await AsyncStorage.getItem('userData');
-      const storedToken = await AsyncStorage.getItem('accessToken');
+      const checkAuth = async () => {
+        // show loader while checking (optional)
+        setLoading(true);
 
-      if (!storedUser || !storedToken) {
-        router.replace('/profile/login');
-        return;
-      }
+        // if redux has user, no need to redirect
+        if (user) {
+          if (active) setLoading(false);
+          return;
+        }
 
-      const parsedUser = JSON.parse(storedUser);
-      dispatch(setUser({ user: parsedUser, token: storedToken }));
-      setLoading(false);
-    };
+        const storedUser = await AsyncStorage.getItem('userData');
+        const storedToken = await AsyncStorage.getItem('accessToken');
 
-    loadUserData();
-  }, [dispatch, router, user]);
+        console.log('storedUser...', storedUser);
+        console.log('storedToken...', storedToken);
+
+        if (!storedUser || !storedToken) {
+          // ✅ important: explicit path
+          router.replace('/(tabs)/profile/login');
+          return;
+        }
+
+        const parsedUser = JSON.parse(storedUser);
+        dispatch(setUser({ user: parsedUser, token: storedToken }));
+
+        if (active) setLoading(false);
+      };
+
+      checkAuth();
+
+      return () => {
+        active = false;
+      };
+    }, [user, dispatch, router])
+  );
 
   // OTP countdown timer
   useEffect(() => {
@@ -207,13 +225,23 @@ export default function ProfileScreen() {
     }
   };
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <View style={styles.container}>
         <Text style={styles.infoText}>Loading user...</Text>
       </View>
     );
   }
+
+  if (!user) {
+    // user doesn't exist because redirect is happening or already happened
+    return (
+      <View style={styles.container}>
+        <Text style={styles.infoText}>Redirecting...</Text>
+      </View>
+    );
+  }
+
 
   const canDelete = deleteConfirmText.trim() === 'DELETE';
   const canVerifyOtp = otpCode.trim().length > 0 && otpSecondsLeft > 0 && !otpLoading;
