@@ -13,7 +13,6 @@ export default function OrderSuccessScreen() {
 	const restaurantName = useSelector((state) => state.cart.restaurantName);
 	const restaurantDetails = useSelector((state) => state.restaurantDetail.data);
 	const isSuccess = status === 1 || status?.toLowerCase?.() === 'success';
-
 	const handleBackToHome = () => {
 		// console.log("back to home")
 		if (isSuccess) {

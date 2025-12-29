@@ -1,9 +1,10 @@
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useLayoutEffect, useState } from 'react';
-import {ActivityIndicator, Alert, Text, View} from 'react-native';
-import {WebView} from 'react-native-webview';
+import { ActivityIndicator, Alert, Text, View } from 'react-native';
+import { WebView } from 'react-native-webview';
+import { ryftpayPaymentSuccess } from '../../../../lib/utils/ryftpay-api'; // Adjust import path
 export default function RyftPayProcessing() {
-	const {responseData, transactionId, clientSecret} = useLocalSearchParams();
+	const {responseData,configData, transactionId, clientSecret} = useLocalSearchParams();
 	const navigation = useNavigation();
 	const router = useRouter();
 	const [loading, setLoading] = useState(true);
@@ -60,11 +61,15 @@ export default function RyftPayProcessing() {
 		if (data.status === 'success') {
 			try {
 				setLoading(true);
+				   await ryftpayPaymentSuccess(
+			          transactionId, // Passing transaction ID from route
+					  configData, // Ensure that responseData is correctly structured
+					);
 				router.push({
 					pathname: '/card-order-success',
 					params: {
-						orderId: responseData.metadata?.orderId || 'N/A',
-						status: 1,
+						orderId: configData.metadata?.orderId || 'N/A',
+						status: 'success',
 						message: 'Your order has been successfully placed.',
 						transactionId: transactionId || 'N/A',
 					},

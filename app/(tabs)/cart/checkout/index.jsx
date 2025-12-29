@@ -213,7 +213,6 @@ export default function CheckoutScreen() {
 	const checkUkIpAddress = async () => {
 		try {
 			const response = await getUkIpVerify();
-			console.log('getUkIpVerify', response);
 
 			if (response?.status === '1') {
 				setIpLookupDone(true);
@@ -471,7 +470,6 @@ export default function CheckoutScreen() {
 		try {
 			const response = await confirmOrder(newPayload);
 
-			console.log("kkkkkkkk.....", response)
 
 			if (typeof response === 'string' && response.includes('MySQL server has gone away')) {
 				setVerificationCodePopupVisible(false);
@@ -617,7 +615,6 @@ export default function CheckoutScreen() {
 		try {
 			const response = await confirmOrder(payload);
 
-			console.log('confirmOrder response.......', response);
 
 			if (response === 'MySQL server has gone away477' && Object.keys(storeItemList).length > 0) {
 				alert('Order confirmation failed. Please try again.');

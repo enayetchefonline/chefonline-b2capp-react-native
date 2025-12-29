@@ -14,7 +14,7 @@ import {
 	View,
 } from 'react-native';
 import Colors from '../../../../constants/color';
-import {getRyftpayPublic, ryftpayPaymentSuccess} from '../../../../lib/utils/ryftpay-api'; // Adjust import path
+import { getRyftpayPublic, ryftpayPaymentSuccess } from '../../../../lib/utils/ryftpay-api'; // Adjust import path
 
 export default function Ryftpay() {
 	const {responseData, configData, transactionId} = useLocalSearchParams();
@@ -141,19 +141,17 @@ export default function Ryftpay() {
 					},
 				},
 			};
-
 			const ryftpayResponse = await getRyftpayPublic(ryftpayMakePaymentBody);
-
 			if (ryftpayResponse?.data?.status === 'Approved' || ryftpayResponse?.data?.status === 'Captured') {
 				await ryftpayPaymentSuccess(
 					transactionId, // Passing transaction ID from route
-					responseData // Ensure that responseData is correctly structured
+					configData // Ensure that responseData is correctly structured
 				);
 				router.push({
 					pathname: '/card-order-success',
 					params: {
 						orderId: innerData.metadata?.orderId || 'N/A',
-						status: 1,
+						status: 'success',
 						message: 'Your order has been successfully placed.',
 						transactionId: transactionId || 'N/A',
 					},
@@ -162,7 +160,7 @@ export default function Ryftpay() {
 				router.push({
 					pathname: '/cart/ryftpay-proccessing',
 					params: {
-						responseData: JSON.stringify(ryftpayResponse?.data, null, 2),
+						responseData: JSON.stringify(ryftpayResponse?.data),
 						configData: configData,
 						transactionId: transactionId,
 						clientSecret: originalResponseData.clientSecret,
